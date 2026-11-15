@@ -318,6 +318,9 @@ body.player .dm-only{display:none!important}
 .item-ph{display:flex;flex-wrap:wrap;gap:6px;width:100%}
 .item-ph select{font-size:.84rem;padding:3px 6px;max-width:100%}
 .shop-item.over{outline:2px dashed var(--brass);outline-offset:2px}
+.mission h3{font-size:1.05rem}
+.rank-big .rk{font-size:.95rem;padding:4px 9px;min-width:2.6em}
+.reward{font-size:.94rem;color:var(--arcane);margin:0}
 </style>
 
 <header class="top"><div class="top-in">
@@ -477,7 +480,7 @@ const REPS={
  sections:{cols:[["h","Heading"],["body","Text (start a line with - for a bullet)",1]],grid:"minmax(0,1fr) minmax(0,2.5fr) auto"},
  npcs:{cols:[["name","Name"],["base","Based in"],["seen","First seen"],["top","Top stat"],["bio","Bio",1]],grid:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 6em minmax(0,1.8fr) auto"},
  costs:{cols:[["rank","Rank"],["cost","Cost"]],grid:"minmax(0,1fr) minmax(0,1fr) auto"},
- shopItems:{cols:[["id","","hid"],["photo","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["effect","Effect (optional)"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em minmax(0,.9fr) auto minmax(0,1.5fr) auto"}
+ shopItems:{cols:[["id","","hid"],["photo","","hid"],["takers","","hid"],["done","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["effect","Effect (optional)"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em minmax(0,.9fr) auto minmax(0,1.5fr) auto"}
 };
 function repRow(name,r){ const R=REPS[name]; r=r||{};
  return `<div class="rep-row" style="grid-template-columns:${R.grid}">${R.cols.map(([k,l,a])=>a==="hid"?`<input type="hidden" data-k="${k}" value="${esc(r[k])}">`:a==="chk"?`<label class="rep-chk"><input type="checkbox" data-k="${k}" ${r[k]&&r[k]!=="0"?"checked":""}> ${esc(l)}</label>`:a?`<textarea data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" rows="1">${esc(r[k])}</textarea>`:`<input type="text" data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" value="${esc(r[k])}">`).join("")}<button type="button" class="rep-del" data-act="rep-del" aria-label="Remove row">✕</button></div>`; }
@@ -1362,11 +1365,11 @@ const stockOf=it=>String(it.stock==null?"":it.stock).trim();
 const inStock=it=>stockOf(it)===""||num(it.stock)>0;
 ui.shop={buyer:"",cat:"all",ai:{busy:false,err:"",ctl:null,hint:""}};
 function viewShops(){ const L=shops().sort(byUpdated).filter(s=>isDM()||s.open!==false||true);
- return `<section class="section"><div class="section-head"><h2>Shops</h2><button class="btn primary dm-only" data-act="new-shop">New shop</button></div>
- ${loading()?`<p class="muted">Opening the codex…</p>`:L.length?`<div class="grid">${L.map(s=>`<a class="card" href="#shop-${s.id}"><span class="eyebrow">${esc(s.campaign||"Shop")}${s.open===false?" · closed":""}</span><h3>${esc(s.name||"Untitled shop")}</h3><p class="meta">${s.keeper?"Run by "+esc(s.keeper)+" · ":""}${(s.items||[]).filter(i=>isDM()||!i.hidden).length} items</p></a>`).join("")}</div>`
+ return `<section class="section"><div class="section-head"><h2>Shops</h2><div class="actions dm-only"><button class="btn" data-act="new-board">New mission board</button><button class="btn primary" data-act="new-shop">New shop</button></div></div>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:L.length?`<div class="grid">${L.map(s=>`<a class="card" href="#shop-${s.id}"><span class="eyebrow">${esc(s.campaign||"Shop")}${s.open===false?" · closed":""}</span><h3>${esc(s.name||"Untitled shop")}</h3><p class="meta">${s.kind==="missions"?"Mission board · ":""}${s.keeper?(s.kind==="missions"?"Posted by ":"Run by ")+esc(s.keeper)+" · ":""}${(s.items||[]).filter(i=>isDM()||!i.hidden).length} ${s.kind==="missions"?"missions":"items"}</p></a>`).join("")}</div>`
  :emptyBox("No shops yet",isDM()?"Set up a blacksmith, an apothecary or a black market. Add items with prices and stock, and players buy with their character's money.":"The DM hasn't opened any shops yet.",isDM()?"new-shop":null,"Open the first shop")}</section>`; }
 function viewShop(id){
- const s=getS(id); if(!s) return notFound("shop","shops");
+ const s=getS(id); if(!s) return notFound("shop","shops"); if(s.kind==="missions") return viewBoard(id,s);
  const dm=isDM(), cur=s.currency||"gold";
  const C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
  const buyerId=(ui.shop.buyer&&S.data.characters[ui.shop.buyer])?ui.shop.buyer:(C[0]&&C[0].id); const buyer=buyerId&&S.data.characters[buyerId];
@@ -1404,10 +1407,10 @@ function editShop(id){
  <form class="form" onsubmit="return false">${campOptions()}
   <div class="fieldset"><h3>Shop</h3><div class="form-grid">
    ${fld("s-name","Shop name",s.name,"text",{ph:"The Rusty Anvil"})}${fld("s-keeper","Shopkeeper",s.keeper,"text",{ph:"Brasspaw"})}
-   <label class="fld"><span>Campaign</span><input type="text" id="s-camp" list="camps" value="${esc(s.campaign)}"></label>${fld("s-cur","Currency",s.currency||"gold","text",{ph:"gold, credits, ryo"})}
+   <label class="fld"><span>Campaign</span><input type="text" id="s-camp" list="camps" value="${esc(s.campaign)}"></label>${fld("s-cur","Currency",s.currency||"gold","text",{ph:"gold, credits, ryo"})}<label class="fld"><span>Type</span><select id="s-kind"><option value="shop" ${s.kind!=="missions"?"selected":""}>Shop</option><option value="missions" ${s.kind==="missions"?"selected":""}>Mission board</option></select></label>
    ${fld("s-blurb","Description",s.blurb,"area",{wide:1,ph:"What the shop looks like and what it's known for"})}
    <label class="row" style="gap:8px"><input type="checkbox" id="s-open" ${s.open!==false?"checked":""}> Open for business</label></div></div>
-  <div class="fieldset"><h3>Stock</h3><p class="edit-hint">Leave Stock blank for unlimited. Effect makes an item apply instantly instead of going to the inventory: write things like <b>level+1</b>, <b>stat+25</b>, <b>sp+10</b>, <b>hpmax+500</b>, <b>mpmax+500</b>, <b>hp+200</b> or <b>money+100</b>. A shop whose currency is "Skill points" charges skill points. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
+  <div class="fieldset"><h3>${s.kind==="missions"?"Missions":"Stock"}</h3>${s.kind==="missions"?`<p class="edit-hint"><b>For a mission board:</b> Item = mission name, Category = type (Hunt, Escort, Rescue…), Rarity = rank from ??? to F, Price = gold reward, Stock = how many characters can take it (blank = anyone), Effect = extra reward such as <b>exp+300</b> or <b>sp+10</b>.</p>`:""}<p class="edit-hint">Leave Stock blank for unlimited. Effect makes an item apply instantly instead of going to the inventory: write things like <b>level+1</b>, <b>stat+25</b>, <b>sp+10</b>, <b>hpmax+500</b>, <b>mpmax+500</b>, <b>hp+200</b> or <b>money+100</b>. A shop whose currency is "Skill points" charges skill points. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
   <div class="fieldset"><h3>Stock the shelves with AI</h3>
    ${CAP.sample?`<label class="fld"><span>What should it sell? (optional)</span><input type="text" id="s-aihint" value="${esc(A.hint)}" placeholder="Cheap potions, a few cursed trinkets, one legendary blade"></label>
    <p class="edit-hint">Adds 6 to 10 items that fit the shop and campaign. Prices follow your existing items and characters' money. Review, then Save.</p>
@@ -1416,8 +1419,8 @@ function editShop(id){
  </form>`;
 }
 function readShopForm(id){ const s=getS(id); if(!s) return null;
- Object.assign(s,{name:v("s-name"),keeper:v("s-keeper"),campaign:v("s-camp"),currency:v("s-cur")||"gold",blurb:v("s-blurb"),open:$("#s-open").checked,
-  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",photo:it.photo||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
+ Object.assign(s,{name:v("s-name"),keeper:v("s-keeper"),campaign:v("s-camp"),currency:v("s-cur")||"gold",kind:(($("#s-kind")||{}).value)||s.kind||"shop",blurb:v("s-blurb"),open:$("#s-open").checked,
+  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",photo:it.photo||"",takers:it.takers||"",done:it.done||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
 async function shopAi(id){ const A=ui.shop.ai; if(A.busy) return; const s=readShopForm(id); if(!s) return;
  const world=worlds().find(w=>w.name&&w.name===s.campaign); const money=chars().map(c=>num(c.money)).filter(Boolean);
  const prompt=`Stock a shop in a homebrew tabletop RPG.
@@ -1436,10 +1439,11 @@ Return ONLY JSON: {"items":[{"name":string,"cat":string (Weapons, Armor, Potions
  A.busy=false; render(true); }
 const paysSp=s=>/skill\s*points?|^\s*sp\s*$/i.test(String(s&&s.currency||""));
 const purse=(s,c)=>num(c&&(paysSp(s)?c.sp:c.money));
-const FX_RE=/(level|stat|sp|hpmax|mpmax|hp|mp|money)\s*([+-])\s*(\d+)/gi;
-function fxText(e){ const L={level:"level",stat:"stat points",sp:"skill points",hpmax:"max HP",mpmax:"max energy",hp:"HP",mp:"energy",money:"money"}; const out=[]; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ out.push(num(n)>=999999?`full ${L[k.toLowerCase()]}`:`${sg}${n} ${L[k.toLowerCase()]}`); return m; }); return out.join(", "); }
+const FX_RE=/(exp|level|stat|sp|hpmax|mpmax|hp|mp|money)\s*([+-])\s*(\d+)/gi;
+function fxText(e){ const L={exp:"EXP",level:"level",stat:"stat points",sp:"skill points",hpmax:"max HP",mpmax:"max energy",hp:"HP",mp:"energy",money:"money"}; const out=[]; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ out.push(num(n)>=999999?`full ${L[k.toLowerCase()]}`:`${sg}${n} ${L[k.toLowerCase()]}`); return m; }); return out.join(", "); }
 function applyFx(c,e){ let any=false; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ n=num(n)*(sg==="-"?-1:1); any=true; k=k.toLowerCase();
-  if(k==="level"){ c.level=num(c.level)+n; c.stat=Math.max(0,num(c.stat)+num(c.gainStat)*n); }
+  if(k==="exp"){ const per=num(c.expPer)||100; c.exp=Math.max(0,num(c.exp)+n); while(c.exp>=per){ c.exp-=per; c.level=num(c.level)+1; c.sp=num(c.sp)+num(c.gainSp); c.stat=num(c.stat)+num(c.gainStat); } }
+  else if(k==="level"){ c.level=num(c.level)+n; c.stat=Math.max(0,num(c.stat)+num(c.gainStat)*n); }
   else if(k==="stat") c.stat=Math.max(0,num(c.stat)+n); else if(k==="sp") c.sp=Math.max(0,num(c.sp)+n); else if(k==="money") c.money=Math.max(0,num(c.money)+n);
   else if(k==="hpmax"){ c.hpMax=Math.max(0,num(c.hpMax)+n); c.hpCur=Math.max(0,num(c.hpCur)+n); } else if(k==="mpmax"){ c.enMax=Math.max(0,num(c.enMax)+n); c.enCur=Math.max(0,num(c.enCur)+n); }
   else if(k==="hp") c.hpCur=Math.max(0,Math.min(num(c.hpMax)||Infinity,num(c.hpCur)+n)); else if(k==="mp") c.enCur=Math.max(0,Math.min(num(c.enMax)||Infinity,num(c.enCur)+n));
@@ -1618,6 +1622,54 @@ document.addEventListener("paste",e=>{ const files=[...((e.clipboardData&&e.clip
  else if(/^shop-/.test(h)&&isDM()){ toast("Click Paste photo on the item first, then paste."); } });
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-act=\"item-paste\"]"); if(!b) return; ui.shop.pasteTo=ui.shop.pasteTo===b.dataset.v?"":b.dataset.v; render("keep"); });
 document.addEventListener("change",e=>{ const t=e.target; if(t.classList&&t.classList.contains("it-photo")&&t.value) setItemPhoto(t.dataset.v,null,t.value); });
+
+/* ================= mission boards ================= */
+const RANK_ORDER=["???","Z+","Z","Z-","SSS+","SSS","SS","S","A+","A","A-","B+","B","B-","C+","C","C-","D","E","F"];
+const rankIdx=r=>{ const i=RANK_ORDER.indexOf(String(r||"").trim().toUpperCase()==="???"?"???":String(r||"").trim().toUpperCase()); return i<0?99:i; };
+const idList=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean);
+function viewBoard(id,s){
+ const dm=isDM(); const C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+ const buyerId=(ui.shop.buyer&&S.data.characters[ui.shop.buyer])?ui.shop.buyer:(C[0]&&C[0].id); const buyer=buyerId&&S.data.characters[buyerId];
+ const all=(s.items||[]).map((it,i)=>Object.assign({i},it)).filter(it=>dm||!it.hidden).sort((a,b)=>rankIdx(a.rarity)-rankIdx(b.rarity));
+ const ranks=[...new Set(all.map(m=>String(m.rarity||"").trim()).filter(Boolean))].sort((a,b)=>rankIdx(a)-rankIdx(b));
+ const f=ui.shop.rank&&ranks.includes(ui.shop.rank)?ui.shop.rank:"all"; const shown=all.filter(m=>f==="all"||String(m.rarity).trim()===f);
+ const nm=cid=>(S.data.characters[cid]||{}).name||"Someone";
+ const card=m=>{ const tk=idList(m.takers), dn=idList(m.done), cap=stockOf(m)===""?null:num(m.stock), left=cap==null?null:Math.max(0,cap-tk.length);
+  const mine=buyer&&tk.includes(buyerId), ph=photo(m.photo), fx=fxText(m.effect);
+  const reward=[num(m.price)?`${fmt(num(m.price))} ${esc(s.currency||"gold")}`:"",fx?esc(fx):""].filter(Boolean).join(" · ")||"Unknown";
+  return `<div class="card mission ${left===0&&!mine?"sold":""}" ${dm?`data-ctx="item:${id}:${m.i}"`:""}>${ph?`<button class="ph-img" data-act="ph-view" data-id="${m.photo}" aria-label="View larger"><img class="item-img" src="${ph.data}" alt="" loading="lazy"></button>`:""}
+   <div class="row" style="gap:10px;align-items:center"><span class="rank-big">${chip(m.rarity||"?")}</span><div style="display:grid;min-width:0"><h3>${esc(m.name||"Untitled mission")}</h3><span class="meta">${esc(m.cat||"Mission")}${m.hidden?" · hidden":""}</span></div></div>
+   ${m.desc?`<p class="muted" style="font-size:.94rem">${esc(m.desc)}</p>`:""}
+   <p class="reward"><b>Reward:</b> ${reward}</p>
+   <p class="meta">${cap==null?"Open to anyone":left>0?`${left} of ${cap} spot${cap===1?"":"s"} open`:"All spots taken"}${tk.length?` · On it: ${tk.map(x=>esc(nm(x))).join(", ")}`:""}${dn.length?` · Done by: ${dn.map(x=>esc(nm(x))).join(", ")}`:""}</p>
+   <div class="actions">${mine?`<button class="btn small" data-act="ms-quit" data-id="${id}" data-i="${m.i}">Abandon</button>`:`<button class="btn small primary" data-act="ms-take" data-id="${id}" data-i="${m.i}" ${!buyer||left===0||s.open===false?"disabled":""}>${!buyer?"Pick a character":left===0?"Full":s.open===false?"Board closed":"Accept as "+esc(buyer.name||"them")}</button>`}
+   ${dm?tk.map(x=>`<button class="btn small" data-act="ms-done" data-id="${id}" data-i="${m.i}" data-c="${x}">Complete for ${esc(nm(x))}</button>`).join(""):""}</div>
+   ${dm?`<span class="item-ph"><label class="btn small">${ph?"Change photo":"Add photo"}<input type="file" accept="image/*" hidden data-upload="item:${id}:${m.i}"></label><button class="btn small ${ui.shop.pasteTo===id+":"+m.i?"primary":""}" data-act="item-paste" data-v="${id}:${m.i}">${ui.shop.pasteTo===id+":"+m.i?"Press Ctrl+V / ⌘V now":"Paste photo"}</button></span>`:""}</div>`; };
+ return `<a href="#shops" class="muted">← All shops</a>
+ <section class="sheet-head"><span class="eyebrow">${esc(s.campaign||"Mission board")}${s.keeper?" · posted by "+esc(s.keeper):""}</span>
+  <div class="row" style="justify-content:space-between"><h1>${esc(s.name||"Mission Board")}</h1><div class="actions"><span class="tag" style="${s.open===false?"color:var(--danger)":"color:var(--arcane)"}">${s.open===false?"Closed":"Open"}</span>${dm?`<button class="btn" data-act="shop-open" data-id="${id}">${s.open===false?"Open board":"Close board"}</button><a class="btn" href="#edit-shop-${id}">Edit missions</a>`:""}</div></div>
+  ${s.blurb?`<p class="lede">${esc(s.blurb)}</p>`:""}</section>
+ <div class="mat-wrap"><div class="section" style="min-width:0">
+  ${ranks.length>1?`<div class="shop-cats"><button class="${f==="all"?"on":""}" data-act="ms-rank" data-v="all">All ranks</button>${ranks.map(r=>`<button class="${f===r?"on":""}" data-act="ms-rank" data-v="${esc(r)}">${esc(r)}</button>`).join("")}</div>`:""}
+  ${shown.length?`<div class="grid">${shown.map(card).join("")}</div>`:emptyBox("No missions posted",dm?"Add missions in Edit missions.":"Check back later.",null,"")}
+  ${dm?dmBox("shop-"+id):""}
+ </div><aside class="side">
+  <div class="card"><span class="eyebrow">Taking missions as</span>${C.length?`<select id="shop-buyer" aria-label="Character">${C.map(c=>`<option value="${c.id}" ${c.id===buyerId?"selected":""}>${esc(c.name||"Unnamed")}</option>`).join("")}</select>
+   <p class="meta">${buyer?`Level ${fmt(buyer.level)} · ${fmt(num(buyer.money))} gold`:""}</p><p class="meta">Accepted missions show up in the character's Items. When the DM marks one complete, the reward is paid automatically.</p>`:`<p class="muted">Create a character to take missions.</p>`}</div>
+  <div class="card"><span class="eyebrow">Board activity</span>${(s.log||[]).length?`<div class="log">${s.log.slice(0,12).map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:`<p class="meta">No one has taken a mission yet.</p>`}</div>
+ </aside></div>`; }
+function msUpdate(id,i,fn){ const s=getS(id); const m=s&&s.items[i]; if(!m) return; fn(s,m); put("shops",id,s,true); render("keep"); }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act, id=b.dataset.id, i=+b.dataset.i;
+ if(act==="ms-rank"){ ui.shop.rank=b.dataset.v; render("keep"); return; }
+ if(act==="new-board"){ const k=rid(); put("shops",k,Object.assign(newShop(),{name:"Mission Board",kind:"missions"}),true); go("edit-shop-"+k); return; }
+ if(act==="ms-take"){ const cid=v("shop-buyer"), c=getC(cid); if(!c) return; msUpdate(id,i,(s,m)=>{ const tk=idList(m.takers); if(tk.includes(cid)) return; const cap=stockOf(m)===""?null:num(m.stock); if(cap!=null&&tk.length>=cap){ toast("No spots left"); return; }
+   m.takers=tk.concat(cid).join(","); c.items=(c.items||[]).concat([{name:`Mission: ${m.name} (${m.rarity||"?"})`,desc:[m.cat,m.desc].filter(Boolean).join(" · ")}]); put("characters",cid,c,true);
+   s.log=[`${c.name||"Someone"} accepted ${m.name}`,...(s.log||[])].slice(0,40); toast(`${c.name||"They"} accepted ${m.name}`); }); return; }
+ if(act==="ms-quit"){ const cid=v("shop-buyer"), c=getC(cid); if(!c) return; msUpdate(id,i,(s,m)=>{ m.takers=idList(m.takers).filter(x=>x!==cid).join(","); c.items=(c.items||[]).filter(x=>x.name!==`Mission: ${m.name} (${m.rarity||"?"})`); put("characters",cid,c,true); s.log=[`${c.name||"Someone"} abandoned ${m.name}`,...(s.log||[])].slice(0,40); }); return; }
+ if(act==="ms-done"){ if(!isDM()) return; const cid=b.dataset.c, c=getC(cid); if(!c) return; msUpdate(id,i,(s,m)=>{ m.takers=idList(m.takers).filter(x=>x!==cid).join(","); m.done=idList(m.done).concat(cid).join(",");
+   c.money=num(c.money)+num(m.price); applyFx(c,m.effect); c.items=(c.items||[]).filter(x=>x.name!==`Mission: ${m.name} (${m.rarity||"?"})`); put("characters",cid,c,true);
+   s.log=[`${c.name||"Someone"} completed ${m.name}: ${[num(m.price)?fmt(num(m.price))+" "+(s.currency||"gold"):"",fxText(m.effect)].filter(Boolean).join(", ")||"no reward"}`,...(s.log||[])].slice(0,40); toast(`${c.name||"They"} completed ${m.name}. Reward paid.`); }); return; }
+});
 
 /* ================= render & routing ================= */
 function render(force){
