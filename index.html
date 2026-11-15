@@ -546,6 +546,7 @@ function editChar(id){
   <div class="fieldset"><h3>Moves and spells</h3>${repeater("moves",c.moves,"Add move")}</div>
   <div class="fieldset"><h3>Items</h3>${repeater("items",c.items,"Add item")}</div>
   <div class="fieldset"><h3>Extra sections</h3><p class="edit-hint">Passives, summons, transformations, backstory, anything else.</p>${repeater("sections",c.sections,"Add section")}</div>
+  <p class="edit-hint">Changes save automatically as you type. Save sheet takes you back to the character.</p>
   <div class="actions"><button type="button" class="btn primary" data-act="save-char" data-id="${id}">Save sheet</button><a class="btn" href="#char-${id}">Cancel</a><span style="flex:1"></span><button type="button" class="btn danger" data-act="del" data-col="characters" data-id="${id}">Delete character</button></div>
  </form>`;
 }
@@ -1462,6 +1463,33 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
 document.addEventListener("input",e=>{ if(e.target.id==="ta-desc"){ ui.treeAi.desc=e.target.value; ui.treeAi.confirm=false; } });
 document.addEventListener("change",e=>{ const t=e.target; if(t.id==="ta-size") ui.treeAi.size=t.value; if(t.id==="ta-char") ui.treeAi.char=t.value; if(t.id==="ta-mode"){ ui.treeAi.mode=t.value; ui.treeAi.confirm=false; } });
 
+/* ================= autosave ================= */
+const AUTO={timer:null,fn:null,label:""};
+function readCharForm(id){ const c=getC(id); if(!c||!$("#f-name")) return null;
+ Object.assign(c,{name:v("f-name"),player:v("f-player"),campaign:v("f-campaign"),race:v("f-race"),cls:v("f-cls"),bio:v("f-bio"),
+  tags:v("f-tags").split(",").map(s=>s.trim()).filter(Boolean),hpCur:num(v("f-hpCur")),hpMax:num(v("f-hpMax")),enLabel:v("f-enLabel")||"MP",enCur:num(v("f-enCur")),enMax:num(v("f-enMax")),
+  level:num(v("f-level")),levelCap:v("f-levelCap"),exp:num(v("f-exp")),expPer:num(v("f-expPer"))||100,sp:num(v("f-sp")),stat:num(v("f-stat")),money:num(v("f-money")),gainSp:num(v("f-gainSp")),gainStat:num(v("f-gainStat")),
+  stats:collect("stats"),skills:collect("skills"),moves:collect("moves"),items:collect("items"),sections:collect("sections")}); return c; }
+function autoFor(){ const h=location.hash.slice(1); let m;
+ if((m=h.match(/^edit-char-(\w+)$/))){ const id=m[1]; return ()=>{ const c=readCharForm(id); if(c) put("characters",id,c,true); }; }
+ if((m=h.match(/^edit-world-(\w+)$/))){ const id=m[1]; return ()=>{ const w=getW(id); if(!w||!$("#w-name")) return; Object.assign(w,{name:v("w-name"),tag:v("w-tag"),blurb:v("w-blurb"),sections:collect("sections"),npcs:collect("npcs")}); put("worlds",id,w,true); }; }
+ if((m=h.match(/^edit-shop-(\w+)$/))){ const id=m[1]; return ()=>{ if(!$("#s-name")) return; const s=readShopForm(id); if(s){ ui.shopDraft=null; put("shops",id,s,true); } }; }
+ if((m=h.match(/^edit-tree-(\w+)$/))){ const id=m[1]; return ()=>{ const t=getT(id); if(!t||!$("#t-name")) return; t.name=v("t-name"); t.campaign=v("t-campaign"); t.blurb=v("t-blurb"); put("trees",id,t,true); }; }
+ if((m=h.match(/^char-(\w+)$/))){ const id=m[1]; return ()=>{ const n=$("#notes"); const c=getC(id); if(n&&c&&(c.notes||"")!==n.value){ c.notes=n.value; put("characters",id,c,true); } }; }
+ return null; }
+function pill(t,live){ const p=$("#savePill"); if(p){ p.textContent=t; if(live!=null) p.classList.toggle("live",live); } }
+function autoFlush(){ if(!AUTO.fn) return; clearTimeout(AUTO.timer); const f=AUTO.fn; AUTO.fn=null; try{ f(); pill(S.mode==="live"?"All changes saved":"Saved in this browser",S.mode==="live"); }catch(e){ console.error(e); } }
+function autoQueue(delay){ const f=autoFor(); if(!f) return; AUTO.fn=f; clearTimeout(AUTO.timer); pill("Saving…"); AUTO.timer=setTimeout(autoFlush,delay==null?900:delay); }
+const AUTO_SKIP=/^(ta-|mai-|ai-|s-aihint|n-|mk-|q$|campSel|tc$|shop-|hpAmt|enAmt|xpAmt|moneyAmt|tokAmt|dn$|dm$|mon-|mat-|addChar|lbl-|dmnote)/;
+document.addEventListener("input",e=>{ const t=e.target; if(!t||!t.closest||!t.closest("#app")) return; if(t.id&&AUTO_SKIP.test(t.id)) return; if(t.id==="notes"||t.closest("form")) autoQueue(); },true);
+document.addEventListener("change",e=>{ const t=e.target; if(!t||!t.closest||!t.closest("#app")) return; if(t.id&&AUTO_SKIP.test(t.id)) return; if(t.type==="checkbox"&&t.closest("form")) autoQueue(300); },true);
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest('[data-act="rep-del"],[data-act="rep-add"]'); if(b) setTimeout(()=>autoQueue(600),0); },true);
+window.addEventListener("hashchange",autoFlush,true);
+window.addEventListener("pagehide",autoFlush);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") autoFlush(); });
+/* DM notes: save as you type too */
+let dmTimer=null; document.addEventListener("input",e=>{ if(e.target.id!=="dmnote") return; const t=e.target; clearTimeout(dmTimer); pill("Saving…"); dmTimer=setTimeout(()=>{ t.dispatchEvent(new Event("change",{bubbles:true})); pill(S.mode==="live"?"All changes saved":"Saved in this browser"); },1000); });
+
 /* ================= render & routing ================= */
 function render(force){
  if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
@@ -1572,7 +1600,7 @@ document.addEventListener("input",e=>{
 document.addEventListener("change",e=>{
  if(e.target.id==="campSel"){ ui.camp=e.target.value; render(true); }
  if(e.target.id==="tc"){ ui.treeChar[e.target.dataset.t]=e.target.value; e.target.blur(); render("keep"); }
- if(e.target.id==="notes"){ const id=e.target.dataset.c, c=getC(id); if(c&&(c.notes||"")!==e.target.value){ c.notes=e.target.value; put("characters",id,c,true); toast("Notes saved"); } }
+ if(e.target.id==="notes"){ const id=e.target.dataset.c, c=getC(id); if(c&&(c.notes||"")!==e.target.value){ c.notes=e.target.value; put("characters",id,c,true); } }
  if(e.target.id==="dn"||e.target.id==="dm"){ ui.dice.n=Math.max(1,Math.min(50,parseInt($("#dn").value)||1)); ui.dice.mod=parseInt($("#dm").value)||0; }
 });
 render(true);
