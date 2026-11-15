@@ -328,6 +328,15 @@ body.player .dm-only{display:none!important}
 .bf-add{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 5.5em auto;gap:6px}
 .bf-add input{min-width:0;width:100%}
 @media (max-width:640px){.bf-add{grid-template-columns:minmax(0,1fr) 5em}.bf-add #bf-eff{grid-column:1/-1}}
+.coins{display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle;font-family:var(--f-mono)}
+.coin{display:inline-flex;align-items:center;gap:4px;font-size:.82rem;font-weight:500;padding:1px 8px 1px 4px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--ink);white-space:nowrap}
+.coin i{width:12px;height:12px;border-radius:50%;display:inline-block;box-shadow:inset -2px -2px 0 rgba(0,0,0,.25),inset 1px 1px 0 rgba(255,255,255,.5)}
+.c-bronze i{background:#b06a32}.c-silver i{background:#b9c0c8}.c-gold i{background:#e0b12f}.c-diamond i{background:linear-gradient(135deg,#a8f0ff,#4fc6e6);border-radius:3px;transform:rotate(45deg) scale(.85)}.c-platinum i{background:linear-gradient(135deg,#ffffff 0%,#e3dcf7 45%,#a99bd8 100%);border:1px solid #8a7cc0;box-shadow:0 0 4px rgba(169,155,216,.8)}
+.price .coin{font-size:.95rem}
+.points .coins{font-size:1rem}.points .coin{font-size:1rem}
+.coin-inputs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.coin-in{display:grid;gap:4px;min-width:0}.coin-in input{width:100%;min-width:0}
+@media (max-width:640px){.coin-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 
 <header class="top"><div class="top-in">
@@ -558,8 +567,8 @@ function viewChar(id){
   <div class="adj"><input type="number" id="xpAmt" placeholder="EXP" aria-label="EXP to add" style="width:90px"><button class="btn small" data-act="xp" data-c="${id}">Add EXP</button><button class="btn small" data-act="xp" data-v="10" data-c="${id}">+10</button><button class="btn small" data-act="xp" data-v="20" data-c="${id}">+20</button><button class="btn small" data-act="xp" data-v="40" data-c="${id}">+40</button></div>
   <div class="row" style="justify-content:space-between"><span>Skill points</span><span class="row"><button class="btn small" data-act="sp" data-v="-1" data-c="${id}" aria-label="Remove a skill point">−</button><span class="mono">${fmt(c.sp)}</span><button class="btn small" data-act="sp" data-v="1" data-c="${id}" aria-label="Add a skill point">+</button></span></div>
   <div class="row" style="justify-content:space-between"><span>Stat points</span><span class="row"><button class="btn small" data-act="st" data-v="-1" data-c="${id}" aria-label="Remove a stat point">−</button><span class="mono">${fmt(c.stat)}</span><button class="btn small" data-act="st" data-v="1" data-c="${id}" aria-label="Add a stat point">+</button></span></div>
-  <div class="row" style="justify-content:space-between"><span>Money</span><span class="mono">${fmt(num(c.money))}</span></div>
-  <div class="adj"><input type="number" id="moneyAmt" placeholder="Amount" aria-label="Money amount"><button class="btn small" data-act="money+" data-c="${id}">Add</button><button class="btn small" data-act="money-" data-c="${id}">Spend</button></div>
+  <div class="row" style="justify-content:space-between;align-items:center"><span>Money</span>${coinHTML(c.money)}</div>
+  <div class="adj"><input type="number" id="moneyAmt" placeholder="Amount" aria-label="Money amount" style="width:90px">${coinSelect("moneyCoin")}<button class="btn small" data-act="money+" data-c="${id}">Add</button><button class="btn small" data-act="money-" data-c="${id}">Spend</button></div>
   <label class="eyebrow" for="notes">Notes</label>
   <textarea id="notes" data-c="${id}" placeholder="Loot, debts, who owes who a favor…">${esc(c.notes||"")}</textarea>
  </aside>`;
@@ -600,7 +609,7 @@ function editChar(id){
   </div></div>
   <div class="fieldset"><h3>Progression</h3><div class="form-grid">
    ${fld("f-level","Level",c.level,"number")}${fld("f-levelCap","Level cap",c.levelCap,"text",{ph:"100"})}${fld("f-exp","EXP",c.exp,"number")}${fld("f-expPer","EXP per level",c.expPer,"number")}
-   ${fld("f-money","Money",c.money||0,"number")}${fld("f-sp","Skill points",c.sp,"number")}${fld("f-stat","Stat points",c.stat,"number")}${fld("f-gainSp","Skill points per level",c.gainSp,"number")}${fld("f-gainStat","Stat points per level",c.gainStat,"number")}
+   ${coinFields(c.money)}${fld("f-sp","Skill points",c.sp,"number")}${fld("f-stat","Stat points",c.stat,"number")}${fld("f-gainSp","Skill points per level",c.gainSp,"number")}${fld("f-gainStat","Stat points per level",c.gainStat,"number")}
   </div></div>
   <div class="fieldset"><h3>Stats</h3><p class="edit-hint">Use any stats your system has. Values can be numbers or letter ranks.</p>${repeater("stats",c.stats,"Add stat")}</div>
   <div class="fieldset"><h3>Skills</h3><p class="edit-hint">Rank is free text: C, B, A-, SS, Z+, Seq 9, whatever your game uses.</p>${repeater("skills",c.skills,"Add skill")}</div>
@@ -793,7 +802,8 @@ function viewTools(){ const D=ui.dice, last=D.last; let cls=""; if(last&&last.n=
   <div class="split"><form class="fieldset" onsubmit="return false"><p class="edit-hint">Skill trees price each skill by its rank here unless the skill sets its own cost. Ranks match exactly; A+ falls back to A if A+ isn't listed.</p>${repeater("costs",costs(),"Add rank")}
    <div class="actions dm-only"><button type="button" class="btn primary" data-act="save-costs">Save costs</button><button type="button" class="btn" data-act="reset-costs">Restore defaults</button></div></form>
   <div class="prose"><p>The starting prices follow the Brand New Day guide (C 15, B 25, A- 55, AA 100, ??? 150) with the other ranks filled in on the same curve. Change them to fit your table; every tree updates right away.</p>
-  <p class="muted">Characters level up when their EXP reaches their EXP-per-level number, and gain the skill and stat points set on their sheet.</p></div></div></section>`;
+  <p class="muted">Characters level up when their EXP reaches their EXP-per-level number, and gain the skill and stat points set on their sheet.</p></div></div></section>
+ ${coinSection()}`;
 }
 function viewNews(){
  const src=[["Wargamer: D&D 2026 releases","https://www.wargamer.com/dnd/gama-books"],["Gizmodo: 2026 roadmap","https://gizmodo.com/dungeons-and-dragons-2026-roadmap-seasons-dnd-ravenloft-2000728869"],["EN World: Gen Con keynote","https://www.enworld.org/threads/d-d%E2%80%99s-gen-con-vision-keynote-2027%E2%80%94all-of-the-announcements.720101/"],["ComicBook.com: 2027 recap","https://comicbook.com/gaming/feature/everything-revealed-for-dnd-2027-roadmap-gen-con-2026-recap/"],["D&D Beyond: 2024 Free Rules","https://www.dndbeyond.com/posts/1804-start-playing-today-with-the-2024-d-d-free-rules"],["Wargamer: SRD 5.2 changes","https://www.wargamer.com/dnd/srd-5-2-changes"]];
@@ -1388,7 +1398,7 @@ function viewShop(id){
  const card=it=>{ const st=stockOf(it), price=num(it.price), afford=buyer&&purse(s,buyer)>=price, avail=inStock(it);
   const ph=photo(it.photo); return `<div class="card shop-item ${avail?"":"sold"}" ${dm?`data-ctx="item:${id}:${it.i}"`:""}>${ph?`<button class="ph-img" data-act="ph-view" data-id="${it.photo}" aria-label="View larger"><img class="item-img" src="${ph.data}" alt="${esc(it.name||"Item")}" loading="lazy"></button>`:""}<div class="row" style="justify-content:space-between;align-items:start"><div style="display:grid;gap:2px;min-width:0"><h3>${esc(it.name||"Unnamed item")}</h3><span class="meta">${esc(it.cat||"")}</span></div>${rarChip(it.rarity)}</div>
   ${it.desc?`<p class="muted" style="font-size:.94rem">${esc(it.desc)}</p>`:""}${fxText(it.effect)?`<p class="meta" style="color:var(--arcane)">Instant: ${esc(fxText(it.effect))}</p>`:""}${it.buff?`<p class="meta" style="color:var(--arcane)">When equipped: ${esc(buffText(it.buff))}</p>`:""}
-  <div class="row" style="justify-content:space-between;margin-top:auto"><span class="price mono">${fmt(price)} <small>${esc(cur)}</small></span><span class="meta">${st===""?"In stock":num(st)>0?`${fmt(num(st))} left`:"Sold out"}${it.hidden?" · hidden":""}</span></div>
+  <div class="row" style="justify-content:space-between;margin-top:auto"><span class="price mono">${isCoinCur(cur)?coinHTML(price):`${fmt(price)} <small>${esc(cur)}</small>`}</span><span class="meta">${st===""?"In stock":num(st)>0?`${fmt(num(st))} left`:"Sold out"}${it.hidden?" · hidden":""}</span></div>
   <div class="actions">${closed&&!dm?"":`<button class="btn small primary" data-act="buy" data-id="${id}" data-i="${it.i}" ${!buyer||!avail||!afford||closed?"disabled":""}>${!avail?"Sold out":!buyer?"Pick a buyer":!afford?"Can't afford":"Buy"}</button>`}${dm?`<span class="item-ph"><label class="btn small">${ph?"Change photo":"Add photo"}<input type="file" accept="image/*" hidden data-upload="item:${id}:${it.i}"></label><button class="btn small ${ui.shop.pasteTo===id+":"+it.i?"primary":""}" data-act="item-paste" data-v="${id}:${it.i}">${ui.shop.pasteTo===id+":"+it.i?"Press Ctrl+V / ⌘V now":"Paste photo"}</button>${photos().length?`<select class="it-photo" data-v="${id}:${it.i}" aria-label="Pick a photo"><option value="">From Photos…</option>${photos().map(p=>`<option value="${p.id}" ${it.photo===p.id?"selected":""}>${esc(p.caption||"Untitled photo")}</option>`).join("")}</select>`:""}</span>`:""}${dm&&buyer?`<button class="btn small" data-act="give" data-id="${id}" data-i="${it.i}" ${avail?"":"disabled"}>Give free</button>`:""}</div></div>`; };
  return `<a href="#shops" class="muted">← All shops</a>
  <section class="sheet-head"><span class="eyebrow">${esc(s.campaign||"Shop")}${s.keeper?" · run by "+esc(s.keeper):""}</span>
@@ -1401,8 +1411,8 @@ function viewShop(id){
   ${dm?dmBox("shop-"+id):""}
  </div><aside class="side">
   <div class="card"><span class="eyebrow">Shopping as</span>${C.length?`<select id="shop-buyer" aria-label="Buyer">${C.map(c=>`<option value="${c.id}" ${c.id===buyerId?"selected":""}>${esc(c.name||"Unnamed")}</option>`).join("")}</select>
-   <div class="row" style="justify-content:space-between;align-items:end"><div><span class="eyebrow">${paysSp(s)?"Skill points":"Money"}</span><div class="points">${fmt(purse(s,buyer))} <small style="font-size:.9rem">${esc(cur)}</small></div></div><a class="btn small" href="#char-${buyerId}">Open sheet</a></div>
-   ${dm?`<div class="adj"><input type="number" id="shop-money" placeholder="Amount" aria-label="Money amount"><button class="btn small" data-act="shop-money" data-v="1" data-id="${id}">Add</button><button class="btn small" data-act="shop-money" data-v="-1" data-id="${id}">Take</button></div>`:""}
+   <div class="row" style="justify-content:space-between;align-items:end"><div><span class="eyebrow">${paysSp(s)?"Skill points":"Money"}</span><div class="points">${!paysSp(s)&&isCoinCur(cur)?coinHTML(purse(s,buyer)):`${fmt(purse(s,buyer))} <small style="font-size:.9rem">${esc(cur)}</small>`}</div></div><a class="btn small" href="#char-${buyerId}">Open sheet</a></div>
+   ${dm?`<div class="adj"><input type="number" id="shop-money" placeholder="Amount" aria-label="Money amount">${!paysSp(s)?coinSelect("shop-money-coin"):""}<button class="btn small" data-act="shop-money" data-v="1" data-id="${id}">Add</button><button class="btn small" data-act="shop-money" data-v="-1" data-id="${id}">Take</button></div>`:""}
    <p class="meta">Bought items go into this character's Items list.</p>`:`<p class="muted">Create a character to buy things.</p><div><button class="btn primary" data-act="new-char">New character</button></div>`}</div>
   ${buyer&&(buyer.items||[]).length?`<div class="card"><span class="eyebrow">${esc(buyer.name||"Their")} inventory</span><ul class="clean">${buyer.items.slice(-8).reverse().map(i=>`<li>${esc(i.name)}</li>`).join("")}</ul></div>`:""}
   <div class="card"><span class="eyebrow">Recent sales</span>${(s.log||[]).length?`<div class="log">${s.log.slice(0,12).map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:`<p class="meta">Nothing sold yet.</p>`}</div>
@@ -1418,7 +1428,7 @@ function editShop(id){
    <label class="fld"><span>Campaign</span><input type="text" id="s-camp" list="camps" value="${esc(s.campaign)}"></label>${fld("s-cur","Currency",s.currency||"gold","text",{ph:"gold, credits, ryo"})}<label class="fld"><span>Type</span><select id="s-kind"><option value="shop" ${s.kind!=="missions"?"selected":""}>Shop</option><option value="missions" ${s.kind==="missions"?"selected":""}>Mission board</option></select></label>
    ${fld("s-blurb","Description",s.blurb,"area",{wide:1,ph:"What the shop looks like and what it's known for"})}
    <label class="row" style="gap:8px"><input type="checkbox" id="s-open" ${s.open!==false?"checked":""}> Open for business</label></div></div>
-  <div class="fieldset"><h3>${s.kind==="missions"?"Missions":"Stock"}</h3>${s.kind==="missions"?`<p class="edit-hint"><b>For a mission board:</b> Item = mission name, Category = type (Hunt, Escort, Rescue…), Rarity = rank from ??? to F, Price = gold reward, Stock = how many characters can take it (blank = anyone), Effect = extra reward such as <b>exp+300</b> or <b>sp+10</b>.</p>`:""}<p class="edit-hint">Leave Stock blank for unlimited. Effect makes an item apply instantly instead of going to the inventory: write things like <b>level+1</b>, <b>stat+25</b>, <b>sp+10</b>, <b>hpmax+500</b>, <b>mpmax+500</b>, <b>hp+200</b> or <b>money+100</b>. A shop whose currency is "Skill points" charges skill points. <b>Buff when equipped</b> (like <b>Defense+800, Speed-50</b>) goes with the item into the buyer's inventory and applies when they equip it. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
+  <div class="fieldset"><h3>${s.kind==="missions"?"Missions":"Stock"}</h3>${s.kind==="missions"?`<p class="edit-hint"><b>For a mission board:</b> Item = mission name, Category = type (Hunt, Escort, Rescue…), Rarity = rank from ??? to F, Price = gold reward, Stock = how many characters can take it (blank = anyone), Effect = extra reward such as <b>exp+300</b> or <b>sp+10</b>.</p>`:""}<p class="edit-hint">Prices are in Gold unless you type coins, like <b>5s</b>, <b>2d 50g</b> or <b>1p</b>. Leave Stock blank for unlimited. Effect makes an item apply instantly instead of going to the inventory: write things like <b>level+1</b>, <b>stat+25</b>, <b>sp+10</b>, <b>hpmax+500</b>, <b>mpmax+500</b>, <b>hp+200</b> or <b>money+100</b>. A shop whose currency is "Skill points" charges skill points. <b>Buff when equipped</b> (like <b>Defense+800, Speed-50</b>) goes with the item into the buyer's inventory and applies when they equip it. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
   <div class="fieldset"><h3>Stock the shelves with AI</h3>
    ${CAP.sample?`<label class="fld"><span>What should it sell? (optional)</span><input type="text" id="s-aihint" value="${esc(A.hint)}" placeholder="Cheap potions, a few cursed trinkets, one legendary blade"></label>
    <p class="edit-hint">Adds 6 to 10 items that fit the shop and campaign. Prices follow your existing items and characters' money. Review, then Save.</p>
@@ -1428,7 +1438,7 @@ function editShop(id){
 }
 function readShopForm(id){ const s=getS(id); if(!s) return null;
  Object.assign(s,{name:v("s-name"),keeper:v("s-keeper"),campaign:v("s-camp"),currency:v("s-cur")||"gold",kind:(($("#s-kind")||{}).value)||s.kind||"shop",blurb:v("s-blurb"),open:$("#s-open").checked,
-  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",buff:it.buff||"",photo:it.photo||"",takers:it.takers||"",done:it.done||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
+  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:parseCoins(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",buff:it.buff||"",photo:it.photo||"",takers:it.takers||"",done:it.done||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
 async function shopAi(id){ const A=ui.shop.ai; if(A.busy) return; const s=readShopForm(id); if(!s) return;
  const world=worlds().find(w=>w.name&&w.name===s.campaign); const money=chars().map(c=>num(c.money)).filter(Boolean);
  const prompt=`Stock a shop in a homebrew tabletop RPG.
@@ -1448,7 +1458,7 @@ Return ONLY JSON: {"items":[{"name":string,"cat":string (Weapons, Armor, Potions
 const paysSp=s=>/skill\s*points?|^\s*sp\s*$/i.test(String(s&&s.currency||""));
 const purse=(s,c)=>num(c&&(paysSp(s)?c.sp:c.money));
 const FX_RE=/(exp|level|stat|sp|hpmax|mpmax|hp|mp|money)\s*([+-])\s*(\d+)/gi;
-function fxText(e){ const L={exp:"EXP",level:"level",stat:"stat points",sp:"skill points",hpmax:"max HP",mpmax:"max energy",hp:"HP",mp:"energy",money:"money"}; const out=[]; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ out.push(num(n)>=999999?`full ${L[k.toLowerCase()]}`:`${sg}${n} ${L[k.toLowerCase()]}`); return m; }); return out.join(", "); }
+function fxText(e){ const L={exp:"EXP",level:"level",stat:"stat points",sp:"skill points",hpmax:"max HP",mpmax:"max energy",hp:"HP",mp:"energy",money:"money"}; const out=[]; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ out.push(k.toLowerCase()==="money"?`${sg}${coinText(num(n))}`:num(n)>=999999?`full ${L[k.toLowerCase()]}`:`${sg}${n} ${L[k.toLowerCase()]}`); return m; }); return out.join(", "); }
 function applyFx(c,e){ let any=false; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ n=num(n)*(sg==="-"?-1:1); any=true; k=k.toLowerCase();
   if(k==="exp"){ const per=num(c.expPer)||100; c.exp=Math.max(0,num(c.exp)+n); while(c.exp>=per){ c.exp-=per; c.level=num(c.level)+1; c.sp=num(c.sp)+num(c.gainSp); c.stat=num(c.stat)+num(c.gainStat); } }
   else if(k==="level"){ c.level=num(c.level)+n; c.stat=Math.max(0,num(c.stat)+num(c.gainStat)*n); }
@@ -1463,7 +1473,7 @@ function shopBuy(id,i,free){
  if(paysSp(s)) c.sp=num(c.sp)-price; else c.money=num(c.money)-price;
  if(!applyFx(c,it.effect)) c.items=(c.items||[]).concat([{name:it.name,desc:[it.rarity,it.desc].filter(Boolean).join(" · "),buff:it.buff||"",equipped:""}]);
  if(stockOf(it)!=="") it.stock=Math.max(0,num(it.stock)-1);
- s.log=[`${c.name||"Someone"} ${free?"was given":"bought"} ${it.name}${free?"":" for "+fmt(price)+" "+(s.currency||"gold")}`,...(s.log||[])].slice(0,30);
+ s.log=[`${c.name||"Someone"} ${free?"was given":"bought"} ${it.name}${free?"":" for "+(isCoinCur(s.currency)?coinText(price):fmt(price)+" "+(s.currency||"gold"))}`,...(s.log||[])].slice(0,30);
  put("characters",cid,c,true); put("shops",id,s,true); toast(free?`Gave ${it.name} to ${c.name||"them"}`:`Bought ${it.name}`); render("keep"); }
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act, id=b.dataset.id;
  if(act==="new-shop"){ const k=rid(); put("shops",k,newShop(),true); go("edit-shop-"+k); return; }
@@ -1471,7 +1481,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  if(act==="buy"){ shopBuy(id,+b.dataset.i,false); return; }
  if(act==="give"){ shopBuy(id,+b.dataset.i,true); return; }
  if(act==="shop-open"){ const s=getS(id); s.open=s.open===false; put("shops",id,s,true); render("keep"); toast(s.open?"Shop opened":"Shop closed"); return; }
- if(act==="shop-money"){ const cid=v("shop-buyer"), c=cid&&getC(cid); const a=Math.abs(num(v("shop-money"))); if(!c||!a){ toast("Type an amount first"); return; } if(paysSp(getS(id))) c.sp=Math.max(0,num(c.sp)+num(b.dataset.v)*a); else c.money=Math.max(0,num(c.money)+num(b.dataset.v)*a); put("characters",cid,c,true); render("keep"); return; }
+ if(act==="shop-money"){ const cid=v("shop-buyer"), c=cid&&getC(cid); const a=Math.abs(num(v("shop-money"))); if(!c||!a){ toast("Type an amount first"); return; } if(paysSp(getS(id))) c.sp=Math.max(0,num(c.sp)+num(b.dataset.v)*a); else c.money=Math.max(0,Math.round((num(c.money)+num(b.dataset.v)*a*coinValues()[v("shop-money-coin")||"gold"])*10000)/10000); put("characters",cid,c,true); render("keep"); return; }
  if(act==="save-shop"){ const s=readShopForm(id); if(!s) return; ui.shopDraft=null; put("shops",id,s,true); toast("Shop saved"); go("shop-"+id); return; }
  if(act==="shop-ai"){ ui.shop.ai.hint=v("s-aihint"); shopAi(id); return; }
  if(act==="shop-ai-stop"){ ui.shop.ai.ctl&&ui.shop.ai.ctl.abort(); return; }
@@ -1532,7 +1542,7 @@ const AUTO={timer:null,fn:null,label:""};
 function readCharForm(id){ const c=getC(id); if(!c||!$("#f-name")) return null;
  Object.assign(c,{name:v("f-name"),player:v("f-player"),campaign:v("f-campaign"),race:v("f-race"),cls:v("f-cls"),bio:v("f-bio"),
   tags:v("f-tags").split(",").map(s=>s.trim()).filter(Boolean),hpCur:num(v("f-hpCur")),hpMax:num(v("f-hpMax")),enLabel:v("f-enLabel")||"MP",enCur:num(v("f-enCur")),enMax:num(v("f-enMax")),
-  level:num(v("f-level")),levelCap:v("f-levelCap"),exp:num(v("f-exp")),expPer:num(v("f-expPer"))||100,sp:num(v("f-sp")),stat:num(v("f-stat")),money:num(v("f-money")),gainSp:num(v("f-gainSp")),gainStat:num(v("f-gainStat")),
+  level:num(v("f-level")),levelCap:v("f-levelCap"),exp:num(v("f-exp")),expPer:num(v("f-expPer"))||100,sp:num(v("f-sp")),stat:num(v("f-stat")),money:coinsFromForm(c.money),gainSp:num(v("f-gainSp")),gainStat:num(v("f-gainStat")),
   stats:collect("stats"),skills:collect("skills"),moves:collect("moves"),items:collect("items"),sections:collect("sections")}); return c; }
 function autoFor(){ const h=location.hash.slice(1); let m;
  if((m=h.match(/^edit-char-(\w+)$/))){ const id=m[1]; return ()=>{ const c=readCharForm(id); if(c) put("characters",id,c,true); }; }
@@ -1644,7 +1654,7 @@ function viewBoard(id,s){
  const nm=cid=>(S.data.characters[cid]||{}).name||"Someone";
  const card=m=>{ const tk=idList(m.takers), dn=idList(m.done), cap=stockOf(m)===""?null:num(m.stock), left=cap==null?null:Math.max(0,cap-tk.length);
   const mine=buyer&&tk.includes(buyerId), ph=photo(m.photo), fx=fxText(m.effect);
-  const reward=[num(m.price)?`${fmt(num(m.price))} ${esc(s.currency||"gold")}`:"",fx?esc(fx):""].filter(Boolean).join(" · ")||"Unknown";
+  const reward=[num(m.price)?(isCoinCur(s.currency)?esc(coinText(m.price)):`${fmt(num(m.price))} ${esc(s.currency||"gold")}`):"",fx?esc(fx):""].filter(Boolean).join(" · ")||"Unknown";
   return `<div class="card mission ${left===0&&!mine?"sold":""}" ${dm?`data-ctx="item:${id}:${m.i}"`:""}>${ph?`<button class="ph-img" data-act="ph-view" data-id="${m.photo}" aria-label="View larger"><img class="item-img" src="${ph.data}" alt="" loading="lazy"></button>`:""}
    <div class="row" style="gap:10px;align-items:center"><span class="rank-big">${chip(m.rarity||"?")}</span><div style="display:grid;min-width:0"><h3>${esc(m.name||"Untitled mission")}</h3><span class="meta">${esc(m.cat||"Mission")}${m.hidden?" · hidden":""}</span></div></div>
    ${m.desc?`<p class="muted" style="font-size:.94rem">${esc(m.desc)}</p>`:""}
@@ -1663,7 +1673,7 @@ function viewBoard(id,s){
   ${dm?dmBox("shop-"+id):""}
  </div><aside class="side">
   <div class="card"><span class="eyebrow">Taking missions as</span>${C.length?`<select id="shop-buyer" aria-label="Character">${C.map(c=>`<option value="${c.id}" ${c.id===buyerId?"selected":""}>${esc(c.name||"Unnamed")}</option>`).join("")}</select>
-   <p class="meta">${buyer?`Level ${fmt(buyer.level)} · ${fmt(num(buyer.money))} gold`:""}</p><p class="meta">Accepted missions show up in the character's Items. When the DM marks one complete, the reward is paid automatically.</p>`:`<p class="muted">Create a character to take missions.</p>`}</div>
+   <p class="meta">${buyer?`Level ${fmt(buyer.level)} · ${esc(coinText(buyer.money))}`:""}</p><p class="meta">Accepted missions show up in the character's Items. When the DM marks one complete, the reward is paid automatically.</p>`:`<p class="muted">Create a character to take missions.</p>`}</div>
   <div class="card"><span class="eyebrow">Board activity</span>${(s.log||[]).length?`<div class="log">${s.log.slice(0,12).map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:`<p class="meta">No one has taken a mission yet.</p>`}</div>
  </aside></div>`; }
 function msUpdate(id,i,fn){ const s=getS(id); const m=s&&s.items[i]; if(!m) return; fn(s,m); put("shops",id,s,true); render("keep"); }
@@ -1676,7 +1686,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  if(act==="ms-quit"){ const cid=v("shop-buyer"), c=getC(cid); if(!c) return; msUpdate(id,i,(s,m)=>{ m.takers=idList(m.takers).filter(x=>x!==cid).join(","); c.items=(c.items||[]).filter(x=>x.name!==`Mission: ${m.name} (${m.rarity||"?"})`); put("characters",cid,c,true); s.log=[`${c.name||"Someone"} abandoned ${m.name}`,...(s.log||[])].slice(0,40); }); return; }
  if(act==="ms-done"){ if(!isDM()) return; const cid=b.dataset.c, c=getC(cid); if(!c) return; msUpdate(id,i,(s,m)=>{ m.takers=idList(m.takers).filter(x=>x!==cid).join(","); m.done=idList(m.done).concat(cid).join(",");
    c.money=num(c.money)+num(m.price); applyFx(c,m.effect); c.items=(c.items||[]).filter(x=>x.name!==`Mission: ${m.name} (${m.rarity||"?"})`); put("characters",cid,c,true);
-   s.log=[`${c.name||"Someone"} completed ${m.name}: ${[num(m.price)?fmt(num(m.price))+" "+(s.currency||"gold"):"",fxText(m.effect)].filter(Boolean).join(", ")||"no reward"}`,...(s.log||[])].slice(0,40); toast(`${c.name||"They"} completed ${m.name}. Reward paid.`); }); return; }
+   s.log=[`${c.name||"Someone"} completed ${m.name}: ${[num(m.price)?(isCoinCur(s.currency)?coinText(m.price):fmt(num(m.price))+" "+(s.currency||"gold")):"",fxText(m.effect)].filter(Boolean).join(", ")||"no reward"}`,...(s.log||[])].slice(0,40); toast(`${c.name||"They"} completed ${m.name}. Reward paid.`); }); return; }
 });
 
 /* ================= buffs & gear ================= */
@@ -1713,6 +1723,32 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  else if(act==="bf-tick"){ const before=(c.buffs||[]).length; c.buffs=(c.buffs||[]).map(x=>x.turns===""||x.turns==null?x:Object.assign({},x,{turns:num(x.turns)-1})).filter(x=>x.turns===""||x.turns==null||num(x.turns)>0); const gone=before-c.buffs.length; toast(gone?`${gone} buff${gone>1?"s":""} wore off`:"A turn passed"); }
  c.hpCur=Math.min(num(c.hpCur),effMax(c,"hp")||num(c.hpCur)); if(c.enMax) c.enCur=Math.min(num(c.enCur),effMax(c,"en")||num(c.enCur));
  put("characters",cid,c,true); render("keep"); });
+
+/* ================= coins: Bronze < Silver < Gold < Diamond < Platinum ================= */
+const COINS=[["platinum","Platinum"],["diamond","Diamond"],["gold","Gold"],["silver","Silver"],["bronze","Bronze"]];
+function coinRates(){ const r=(S.data.settings&&S.data.settings.coins&&S.data.settings.coins.rates)||[10,10,10,10]; return [0,1,2,3].map(i=>Math.max(1,Math.round(num(r[i])||10))); } // bronze→silver, silver→gold, gold→diamond, diamond→platinum
+function coinValues(){ const [bs,sg,gd,dp]=coinRates(); return {bronze:1/(bs*sg),silver:1/sg,gold:1,diamond:gd,platinum:gd*dp}; }
+function coinsOf(gold){ const [bs,sg,gd,dp]=coinRates(); const unit={bronze:1,silver:bs,gold:bs*sg,diamond:bs*sg*gd,platinum:bs*sg*gd*dp}; let b=Math.max(0,Math.round(num(gold)*bs*sg)); const out=[];
+ for(const [k] of COINS){ const n=Math.floor(b/unit[k]); if(n){ out.push([k,n]); b-=n*unit[k]; } } return out; }
+const coinName=k=>(COINS.find(x=>x[0]===k)||[k,k])[1];
+function coinText(gold){ const c=coinsOf(gold); return c.length?c.map(([k,n])=>`${fmt(n)} ${coinName(k)}`).join(", "):"0 Gold"; }
+function coinHTML(gold){ const c=coinsOf(gold); return `<span class="coins" title="${esc(coinText(gold))}">${(c.length?c:[["gold",0]]).map(([k,n])=>`<span class="coin c-${k}" aria-label="${fmt(n)} ${coinName(k)}"><i></i>${fmt(n)}</span>`).join("")}</span>`; }
+function parseCoins(str){ const s=String(str==null?"":str).trim().toLowerCase(); if(!s) return 0; if(/^-?[\d,.]+$/.test(s)) return num(s); const vals=coinValues(); let t=0, any=false;
+ s.replace(/([\d,.]+)\s*(platinum|plat|pp|p|diamonds?|dia|dp|d|gold|gp|g|silver|sp|s|bronze|bp|b|copper|cp|c)\b/g,(m,n,u)=>{ any=true; const k=/^p/.test(u)?"platinum":/^d/.test(u)?"diamond":/^g/.test(u)?"gold":/^s/.test(u)?"silver":"bronze"; t+=num(n)*vals[k]; return m; });
+ return any?Math.round(t*10000)/10000:num(s); }
+const isCoinCur=c=>/^(gold|coins?|money|gp|)$/i.test(String(c==null?"":c).trim());
+const coinSelect=id=>`<select id="${id}" aria-label="Coin type">${COINS.map(([k,n])=>`<option value="${k}" ${k==="gold"?"selected":""}>${n}</option>`).join("")}</select>`;
+function coinFields(gold){ const have=Object.fromEntries(coinsOf(gold)); return `<div class="fld wide"><span>Money</span><div class="coin-inputs">${COINS.map(([k,n])=>`<label class="coin-in"><span class="coin c-${k}"><i></i>${n}</span><input type="number" min="0" step="1" id="f-coin-${k}" value="${have[k]||0}" aria-label="${n}"></label>`).join("")}</div></div>`; }
+function coinsFromForm(fallback){ if(!$("#f-coin-gold")) return num(fallback); const vals=coinValues(); let t=0; COINS.forEach(([k])=>{ t+=num(v("f-coin-"+k))*vals[k]; }); return Math.round(t*10000)/10000; }
+function coinSection(){ const r=coinRates(), dm=isDM(); const pairs=[["Bronze","Silver"],["Silver","Gold"],["Gold","Diamond"],["Diamond","Platinum"]];
+ return `<section class="section"><div class="section-head"><h2>Coins</h2></div><div class="split"><div class="card" style="gap:12px">
+  <div class="ladder">${["bronze","silver","gold","diamond","platinum"].map((k,i)=>`${i?'<span class="arrow">→</span>':""}<span class="coin c-${k}"><i></i>${coinName(k)}</span>`).join("")}</div>
+  <ul class="clean">${pairs.map(([a,b],i)=>`<li class="row" style="gap:8px">${dm?`<input type="number" min="1" id="coin-rate-${i}" value="${r[i]}" style="width:5.5em" aria-label="${a} per ${b}">`:`<b class="mono">${r[i]}</b>`} ${a} = 1 ${b}</li>`).join("")}</ul>
+  ${dm?`<div class="actions"><button class="btn primary small" data-act="coins-save">Save rates</button><button class="btn small" data-act="coins-reset">Back to 10s</button></div>`:""}</div>
+  <div class="prose"><p>Money is shown in coins everywhere: sheets, shops and mission rewards. 1 Platinum is worth ${fmt(coinValues().platinum)} Gold, and 1 Gold is worth ${fmt(1/coinValues().bronze)} Bronze.</p><p class="muted">In shop prices you can type coins directly, like <b>5s</b>, <b>2d 50g</b> or <b>1p</b>. Plain numbers count as Gold.</p></div></div></section>`; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return;
+ if(b.dataset.act==="coins-save"){ const rates=[0,1,2,3].map(i=>Math.max(1,Math.round(num(v("coin-rate-"+i))||10))); put("settings","coins",{rates},true); render(true); toast("Coin rates saved"); }
+ if(b.dataset.act==="coins-reset"){ put("settings","coins",{rates:[10,10,10,10]},true); render(true); toast("Back to 10 of each"); } });
 
 /* ================= render & routing ================= */
 function render(force){
@@ -1771,7 +1807,7 @@ document.addEventListener("click",e=>{
  if(act==="save-char"){ const c=getC(id); if(!c) return;
   Object.assign(c,{name:v("f-name"),player:v("f-player"),campaign:v("f-campaign"),race:v("f-race"),cls:v("f-cls"),bio:v("f-bio"),
    tags:v("f-tags").split(",").map(s=>s.trim()).filter(Boolean),hpCur:num(v("f-hpCur")),hpMax:num(v("f-hpMax")),enLabel:v("f-enLabel")||"MP",enCur:num(v("f-enCur")),enMax:num(v("f-enMax")),
-   level:num(v("f-level")),levelCap:v("f-levelCap"),exp:num(v("f-exp")),expPer:num(v("f-expPer"))||100,sp:num(v("f-sp")),stat:num(v("f-stat")),money:num(v("f-money")),gainSp:num(v("f-gainSp")),gainStat:num(v("f-gainStat")),
+   level:num(v("f-level")),levelCap:v("f-levelCap"),exp:num(v("f-exp")),expPer:num(v("f-expPer"))||100,sp:num(v("f-sp")),stat:num(v("f-stat")),money:coinsFromForm(c.money),gainSp:num(v("f-gainSp")),gainStat:num(v("f-gainStat")),
    stats:collect("stats"),skills:collect("skills"),moves:collect("moves"),items:collect("items"),sections:collect("sections")});
   put("characters",id,c,true); toast("Sheet saved"); go("char-"+id); return; }
  if(act==="save-world"){ const w=getW(id); if(!w) return; Object.assign(w,{name:v("w-name"),tag:v("w-tag"),blurb:v("w-blurb"),sections:collect("sections"),npcs:collect("npcs")}); put("worlds",id,w,true); toast("World saved"); go("world-"+id); return; }
@@ -1813,7 +1849,7 @@ document.addEventListener("click",e=>{
  else if(act==="xp"){ const a=b.dataset.v?num(b.dataset.v):num($("#xpAmt").value); if(!a){toast("Type an amount of EXP first");return;} c.exp=num(c.exp)+a; let ups=0; const per=num(c.expPer)||100;
   while(c.exp>=per){ c.exp-=per; c.level=num(c.level)+1; c.sp=num(c.sp)+num(c.gainSp); c.stat=num(c.stat)+num(c.gainStat); ups++; }
   toast(ups?`Level up! Now level ${c.level}: +${fmt(num(c.gainSp)*ups)} skill points, +${fmt(num(c.gainStat)*ups)} stat points`:`+${a} EXP`); }
- else if(act==="money+"||act==="money-"){ const a=Math.abs(num($("#moneyAmt").value)); if(!a){toast("Type an amount first");return;} c.money=Math.max(0,num(c.money)+(act==="money+"?a:-a)); }
+ else if(act==="money+"||act==="money-"){ const a=Math.abs(num($("#moneyAmt").value)); if(!a){toast("Type an amount first");return;} { const amt=a*coinValues()[v("moneyCoin")||"gold"]; c.money=Math.max(0,Math.round((num(c.money)+(act==="money+"?amt:-amt))*10000)/10000); } }
  else if(act==="sp"){ c.sp=Math.max(0,num(c.sp)+num(b.dataset.v)); }
  else if(act==="st"){ c.stat=Math.max(0,num(c.stat)+num(b.dataset.v)); }
  else return;
