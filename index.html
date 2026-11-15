@@ -1,0 +1,1483 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<title>The Party Codex</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IM+Fell+English+SC&display=swap">
+<style>
+/* Layout: a guild ledger. Sticky brass nav band, one reading column, wide canvases (skill trees) scroll sideways inside their own frame. */
+:root{
+  --bg:#e9ebf2; --panel:#f7f8fb; --sunk:#dfe2ec; --ink:#1c1e2f; --muted:#5a5d76; --line:#c9cddd;
+  --brass:#8a5a0b; --brass-soft:#f0e3c6; --arcane:#1d7473; --arcane-soft:#d5ecea; --danger:#ad3a30;
+  --r0:#6f7388; --r1:#2f7f4b; --r2:#2f62b3; --r3:#7a43b6; --r4:#a66f0c; --r5:#b5372f; --r6:#6b6f86;
+  --f-display:"Grenze Gotisch", "UnifrakturMaguntia", Georgia, serif;
+  --f-body:"Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11131f; --panel:#191c2d; --sunk:#0d0f19; --ink:#e8e5da; --muted:#9a9ab2; --line:#2c3050;
+  --brass:#e2ae4f; --brass-soft:#3a2f19; --arcane:#5fc2bd; --arcane-soft:#15302f; --danger:#e57a70;
+  --r0:#9095aa; --r1:#5fc07f; --r2:#6f9ff0; --r3:#b58bf0; --r4:#e8b04a; --r5:#f0776c; --r6:#8d91a8;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#11131f; --panel:#191c2d; --sunk:#0d0f19; --ink:#e8e5da; --muted:#9a9ab2; --line:#2c3050;
+  --brass:#e2ae4f; --brass-soft:#3a2f19; --arcane:#5fc2bd; --arcane-soft:#15302f; --danger:#e57a70;
+  --r0:#9095aa; --r1:#5fc07f; --r2:#6f9ff0; --r3:#b58bf0; --r4:#e8b04a; --r5:#f0776c; --r6:#8d91a8;
+  color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16.5px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+a{color:var(--arcane)}
+h1,h2,h3{text-wrap:balance;line-height:1.15;margin:0}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(2.1rem,5vw,3.2rem);letter-spacing:.01em}
+h2{font-family:var(--f-display);font-weight:500;font-size:1.7rem}
+h3{font-size:1.08rem;font-weight:700}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* top band */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--panel);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:18px;min-height:56px}
+.brand{font-family:var(--f-display);font-size:1.45rem;font-weight:700;color:var(--brass);text-decoration:none;white-space:nowrap}
+.nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.nav::-webkit-scrollbar{display:none}
+.nav a{padding:7px 11px;border-radius:7px;color:var(--muted);text-decoration:none;font-weight:500;white-space:nowrap}
+.nav a:hover{color:var(--ink);background:var(--sunk)}
+.nav a.on{color:var(--ink);background:var(--brass-soft)}
+.save-pill{font-size:.78rem;white-space:nowrap;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.save-pill.live{border-color:var(--arcane);color:var(--arcane)}
+@media (max-width:720px){.save-pill{display:none}}
+
+main{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px;display:grid;gap:28px}
+.note{border:1px solid var(--brass);background:var(--brass-soft);padding:10px 14px;border-radius:var(--radius);font-size:.95rem}
+
+/* generic blocks */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+a.card{text-decoration:none;color:inherit}
+a.card:hover{border-color:var(--brass)}
+.card .meta{font-size:.86rem;color:var(--muted)}
+.section{display:grid;gap:14px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:6px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{font-size:.8rem;padding:2px 8px;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--panel);padding:7px 13px;border-radius:8px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--brass)}
+.btn.primary{background:var(--brass);border-color:var(--brass);color:var(--panel)}
+.btn.small{padding:3px 9px;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+input[type=number],input[type=text],select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+textarea{width:100%;min-height:110px;resize:vertical}
+ul.clean{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+ul.dots{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.lede{font-size:1.12rem;max-width:68ch;color:var(--muted)}
+.prose{max-width:70ch;display:grid;gap:10px}
+
+/* ranks */
+.rk{--rc:var(--r0);display:inline-block;min-width:2.2em;text-align:center;font-family:var(--f-mono);font-size:.74rem;font-weight:500;padding:1px 6px;border-radius:5px;border:1px solid var(--rc);color:var(--rc);background:color-mix(in srgb,var(--rc) 13%,transparent);white-space:nowrap}
+.rk.t1{--rc:var(--r1)}.rk.t2{--rc:var(--r2)}.rk.t3{--rc:var(--r3)}.rk.t4{--rc:var(--r4)}.rk.t5{--rc:var(--r5)}.rk.t6{--rc:var(--r6);border-style:dashed}
+
+/* hero */
+.hero{display:grid;gap:12px;padding-block:8px 4px}
+.hero .sigil{font-family:var(--f-mono);font-size:.82rem;color:var(--brass)}
+.counts{display:flex;gap:22px;flex-wrap:wrap;font-size:.95rem;color:var(--muted)}
+.counts b{font-family:var(--f-mono);color:var(--ink);font-weight:500;margin-right:4px}
+
+/* roster */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filters input{flex:1;min-width:200px}
+.char-card h3{font-size:1.12rem}
+.char-card .line{display:flex;justify-content:space-between;gap:8px;font-size:.88rem;color:var(--muted)}
+
+/* sheet */
+.sheet-head{display:grid;gap:8px}
+.sheet{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+@media (max-width:900px){.sheet{grid-template-columns:minmax(0,1fr)}}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.stat{background:var(--panel);outline:1px solid var(--line);padding:9px 12px;display:grid;gap:2px;min-width:0}
+.stat .k{font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--f-mono);font-size:1rem;overflow-wrap:anywhere}
+.list{display:grid;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel)}
+.li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;padding:10px 14px;border-top:1px solid var(--line);align-items:baseline}
+.li:first-child{border-top:0}
+.li .nm{font-weight:700}
+.li .ds{grid-column:2;color:var(--muted);font-size:.94rem}
+.li .nums{grid-column:2;font-family:var(--f-mono);font-size:.82rem;color:var(--brass)}
+.li.nochip{grid-template-columns:minmax(0,1fr)}
+.li.nochip .ds,.li.nochip .nums{grid-column:1}
+.tracker{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:grid;gap:12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px)}
+@media (max-width:900px){.tracker{position:static}}
+.meter{display:grid;gap:4px}
+.meter .bar{height:9px;border-radius:9px;background:var(--sunk);overflow:hidden}
+.meter .fill{height:100%;background:var(--arcane)}
+.meter.hp .fill{background:var(--danger)}
+.meter.xp .fill{background:var(--brass)}
+.meter .lbl{display:flex;justify-content:space-between;font-size:.86rem}
+.adj{display:flex;gap:6px;flex-wrap:wrap}
+.adj input{width:120px}
+.servant{border:1px solid var(--brass);border-radius:var(--radius);padding:16px;display:grid;gap:12px;background:var(--panel)}
+.params{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.param{display:grid;gap:4px}
+.param .k{font-size:.78rem;color:var(--muted)}
+.pbar{height:6px;border-radius:6px;background:var(--sunk);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--brass)}
+
+/* trees */
+.tree-wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+@media (max-width:960px){.tree-wrap{grid-template-columns:minmax(0,1fr)}}
+.canvas-frame{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:
+  radial-gradient(circle at 1px 1px, color-mix(in srgb,var(--muted) 22%,transparent) 1px, transparent 0) 0 0/22px 22px, var(--sunk)}
+.canvas{position:relative}
+.canvas svg{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.edge{fill:none;stroke:var(--line);stroke-width:2}
+.edge.on{stroke:var(--arcane);stroke-width:2.6}
+.lane{position:absolute;left:14px;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+.node{position:absolute;width:168px;height:74px;border-radius:9px;border:1.5px solid var(--line);background:var(--panel);padding:6px 9px;text-align:left;cursor:pointer;display:grid;grid-template-rows:auto 1fr;gap:2px;transition:transform .12s, border-color .12s}
+.node:hover{transform:translateY(-1px);border-color:var(--brass)}
+.node .nn{font-weight:700;font-size:.9rem;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.node .nr{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.node .nc{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.node.on{border-color:var(--arcane);background:var(--arcane-soft)}
+.node.on .nc{color:var(--arcane)}
+.node.open{border-color:var(--brass);border-style:dashed}
+.node.short,.node.locked{opacity:.6}
+.node.blocked{opacity:.38}
+.node.blocked .nn{text-decoration:line-through}
+.node.ph{border-style:dotted;background:transparent}
+.node.sel{outline:2.5px solid var(--brass);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.node{transition:none}.node:hover{transform:none}}
+.side{display:grid;gap:14px}
+.legend{display:grid;gap:6px;font-size:.88rem}
+.legend span.sw{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--line);vertical-align:-2px;margin-right:6px}
+.points{font-family:var(--f-mono);font-size:1.6rem;color:var(--brass)}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:8px 12px;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-top:0;white-space:nowrap}
+
+/* dice */
+.dice-out{font-family:var(--f-mono);font-size:2.6rem;color:var(--brass);line-height:1}
+.dice-out.crit{color:var(--arcane)}
+.dice-out.fail{color:var(--danger)}
+.die-row{display:flex;gap:6px;flex-wrap:wrap}
+.die-row .btn{font-family:var(--f-mono);min-width:56px}
+.die-row .btn.on{background:var(--brass-soft);border-color:var(--brass)}
+.log{font-family:var(--f-mono);font-size:.84rem;display:grid;gap:4px;max-height:220px;overflow:auto}
+.ladder{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ladder .arrow{color:var(--muted);font-size:.8rem}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:9px;font-weight:500;z-index:20;max-width:calc(100% - 32px)}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.src-list li{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+/* forms & builder */
+.form{display:grid;gap:22px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.fld{display:grid;gap:4px;font-size:.84rem;color:var(--muted);min-width:0}
+.fld input,.fld textarea,.fld select{color:var(--ink);font-size:1rem;width:100%}
+.fld.wide{grid-column:1/-1}
+.rep{display:grid;gap:8px}
+.rep-row{display:grid;gap:6px;align-items:start}
+.rep-row input,.rep-row textarea{width:100%;min-width:0}
+.rep-row textarea{min-height:40px}
+.rep-del{border:1px solid var(--line);background:var(--panel);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--muted)}
+.rep-del:hover{border-color:var(--danger);color:var(--danger)}
+@media (max-width:640px){.rep-row{grid-template-columns:minmax(0,1fr) auto !important}.rep-row>[data-k]{grid-column:1}.rep-row>.rep-del{grid-column:2;grid-row:1}}
+.fieldset{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:grid;gap:12px}
+.fieldset>h3{font-family:var(--f-display);font-weight:500;font-size:1.35rem}
+.checks{display:flex;flex-wrap:wrap;gap:6px 14px;max-height:150px;overflow:auto;font-size:.92rem}
+.checks label{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn.danger{color:var(--danger)}
+.btn.danger.primary{background:var(--danger);border-color:var(--danger);color:var(--panel)}
+.empty{border:1.5px dashed var(--line);border-radius:var(--radius);padding:28px 20px;display:grid;gap:10px;justify-items:start;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+.empty h3{font-family:var(--f-display);font-weight:500;font-size:1.5rem}
+.canvas.editing .node{cursor:pointer}
+.edit-hint{font-size:.86rem;color:var(--muted)}
+.mapbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sw-btn{width:30px;height:30px;border-radius:6px;border:2px solid var(--line);cursor:pointer;color:var(--muted);font-size:.8rem}
+.sw-btn.on{border-color:var(--brass);outline:2px solid var(--brass);outline-offset:1px}
+.map-frame{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--sunk);max-height:72vh}
+.mat-stage{position:relative;width:max-content}
+.tok-layer{position:absolute;inset:0;pointer-events:none}
+.tok{position:absolute;pointer-events:auto;border-radius:50%;border:2px solid #fff;color:#fff;font-weight:700;display:grid;place-items:center;cursor:grab;touch-action:none;box-shadow:0 2px 6px rgba(0,0,0,.45);user-select:none;padding:0;font-family:var(--f-body)}
+.tok:active{cursor:grabbing}
+.tok.hid{opacity:.55;border-style:dashed}
+.tok.act{outline:3px solid var(--brass);outline-offset:2px}
+.tok.sel{box-shadow:0 0 0 3px var(--arcane),0 2px 6px rgba(0,0,0,.45)}
+.tok .hpb{position:absolute;left:12%;right:12%;bottom:-8px;height:4px;background:rgba(0,0,0,.55);border-radius:3px;overflow:hidden}
+.tok .hpb i{display:block;height:100%;background:#e05a4f}
+.role{display:flex;border:1px solid var(--line);border-radius:99px;overflow:hidden;flex:none}
+.role button{border:0;background:transparent;padding:4px 11px;font-size:.84rem;cursor:pointer;color:var(--muted);font-weight:500}
+.role button.on{background:var(--brass);color:var(--panel)}
+.ai-prev{max-width:200px;max-height:200px;border-radius:8px;border:1px solid var(--line)}
+.dmbox{border-color:var(--r5)}
+.dmbox textarea{min-height:90px}
+.mat-wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+@media (max-width:960px){.mat-wrap{grid-template-columns:minmax(0,1fr)}}
+body.player .dm-only{display:none!important}
+#mapcv,#matcv{display:block}
+#matcv{touch-action:none}
+.mk{--mk-bg:#14161c;--mk-panel:#1c1f28;--mk-line:#2d3140;--mk-ink:#e8e4d8;--mk-muted:#8f94a7;--mk-acc:#e2ae4f;display:grid;grid-template-columns:62px minmax(0,1fr) 296px;grid-template-rows:auto minmax(0,1fr);height:min(80vh,880px);min-height:540px;background:var(--mk-bg);color:var(--mk-ink);border-radius:14px;overflow:hidden;border:1px solid var(--mk-line);box-shadow:0 10px 30px rgba(0,0,0,.25);color-scheme:dark}
+.mk-top{grid-column:1/-1;display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--mk-line);flex-wrap:wrap;background:var(--mk-panel)}
+.mk-name{font-family:"IM Fell English SC",Georgia,serif;font-size:1.15rem;background:transparent!important;border:1px solid transparent!important;color:var(--mk-ink)!important;min-width:0;width:min(260px,100%);padding:4px 8px;border-radius:7px}
+.mk-name:hover,.mk-name:focus{border-color:var(--mk-line)!important}
+.mk-sep{width:1px;height:22px;background:var(--mk-line)}
+.mk-z{font-family:var(--f-mono);font-size:.8rem;color:var(--mk-muted);min-width:3.2em;text-align:center}
+.btnk{background:#272b37;border:1px solid var(--mk-line);color:var(--mk-ink);border-radius:7px;padding:5px 11px;cursor:pointer;font-size:.86rem;text-decoration:none;font-family:var(--f-body)}
+.btnk:hover{border-color:var(--mk-acc)}
+.btnk:disabled{opacity:.4;cursor:default}
+.btnk.on{background:var(--mk-acc);color:#1b1408;border-color:var(--mk-acc)}
+.btnk.acc{background:var(--mk-acc);color:#1b1408;border-color:var(--mk-acc);font-weight:700}
+.btnk.warn{color:#f0877c;border-color:#5a2d2a}
+.mk select,.mk input[type=text]{background:#10121a;color:var(--mk-ink);border:1px solid var(--mk-line);border-radius:7px;padding:5px 8px}
+.mk-chk{display:flex;gap:6px;align-items:center;font-size:.86rem;color:var(--mk-ink)}
+.mk-rail{display:flex;flex-direction:column;gap:4px;padding:8px 7px;border-right:1px solid var(--mk-line);background:var(--mk-panel);overflow-y:auto}
+.mk-rail button{width:46px;height:46px;border-radius:10px;border:0;background:transparent;color:var(--mk-muted);display:grid;place-items:center;cursor:pointer}
+.mk-rail button:hover{color:var(--mk-ink);background:#262a36}
+.mk-rail button.on{background:#2e3343;color:var(--mk-acc);box-shadow:inset 3px 0 0 var(--mk-acc)}
+.mk-stage{border:0!important;border-radius:0!important;overflow:auto;background:radial-gradient(circle at 1px 1px,#262a36 1px,transparent 0) 0 0/18px 18px,#0f1116;padding:36px}
+.mk-stage canvas{margin:0 auto;box-shadow:0 8px 30px rgba(0,0,0,.6);touch-action:none;cursor:crosshair}
+.mk-stage canvas.tool-select{cursor:default}.mk-stage canvas.tool-pan{cursor:grab}.mk-stage canvas.tool-text{cursor:text}
+.mk-panel{border-left:1px solid var(--mk-line);background:var(--mk-panel);overflow-y:auto;padding:14px;display:grid;gap:12px;align-content:start}
+.mk-panel h4{margin:0;font-family:"IM Fell English SC",Georgia,serif;font-weight:400;font-size:1.25rem;letter-spacing:.02em}
+.mk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.mk-tile{aspect-ratio:1;border-radius:9px;border:2px solid transparent;background:#262a36 center/cover;cursor:pointer;position:relative;padding:0;overflow:hidden}
+.mk-tile:hover{border-color:#4a5066}.mk-tile.on{border-color:var(--mk-acc)}
+.mk-tile img{width:100%;height:100%;object-fit:contain;display:block;padding:2px 2px 12px}
+.mk-tile span{position:absolute;left:0;right:0;bottom:0;font-size:.6rem;line-height:1.2;padding:2px 3px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mk-cats{display:flex;flex-wrap:wrap;gap:4px}
+.mk-cats button{border:1px solid var(--mk-line);background:transparent;color:var(--mk-muted);border-radius:99px;padding:3px 9px;font-size:.78rem;cursor:pointer}
+.mk-cats button.on{background:#2e3343;color:var(--mk-acc);border-color:var(--mk-acc)}
+.mk-f{display:grid;gap:4px;font-size:.84rem;color:var(--mk-muted)}
+.mk-f b{color:var(--mk-ink);font-family:var(--f-mono);font-weight:500}
+.mk-f input[type=range]{accent-color:var(--mk-acc);width:100%}
+.mk-row{display:flex;gap:6px;flex-wrap:wrap}
+.mk-hint{font-size:.82rem;color:var(--mk-muted);margin:0}
+@media (max-width:860px){.mk{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(340px,58vh) auto;height:auto}
+ .mk-rail{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--mk-line)}
+ .mk-rail button.on{box-shadow:inset 0 -3px 0 var(--mk-acc)}
+ .mk-panel{border-left:0;border-top:1px solid var(--mk-line);max-height:none}
+ .mk-stage{padding:16px}}
+.shop-item.sold{opacity:.6}
+.shop-item h3{font-size:1.05rem}
+.price{font-size:1.2rem;color:var(--brass)}
+.price small{font-size:.75rem;color:var(--muted)}
+.shop-cats button{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:99px;padding:4px 11px;font-size:.84rem;cursor:pointer}
+.shop-cats button.on{background:var(--brass-soft);color:var(--ink);border-color:var(--brass)}
+.rep-chk{display:flex;gap:5px;align-items:center;font-size:.84rem;color:var(--muted);white-space:nowrap;padding-top:7px}
+@media (min-width:641px) and (max-width:1100px){[data-rep="shopItems"] .rep-row{grid-template-columns:repeat(3,minmax(0,1fr)) auto !important}[data-rep="shopItems"] .rep-row textarea{grid-column:1/-2}}
+.sky{position:relative;overflow:auto;border-radius:14px;border:1px solid #2a3350;background:#0d1422;max-height:min(80vh,900px);box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.sky-in{position:relative}
+.sky canvas,.sky svg{position:absolute;left:0;top:0;pointer-events:none}
+.sky-edge{stroke:rgba(200,215,240,.2);stroke-width:2}
+.sky-edge.on{stroke:var(--c);stroke-width:2.6;filter:drop-shadow(0 0 3px var(--c))}
+.sk{position:absolute;width:34px;height:34px;border-radius:7px;border:2px solid color-mix(in srgb,var(--c) 40%,#0b0f18);background:#121a2a;color:color-mix(in srgb,var(--c) 55%,#8a93a8);display:grid;place-items:center;padding:0;cursor:pointer;font:700 11px/1 var(--f-mono);box-shadow:inset 0 0 0 2px rgba(0,0,0,.45);transition:transform .12s}
+.sk:hover{transform:scale(1.12);z-index:3}
+.sk .lb{position:absolute;top:39px;left:50%;transform:translateX(-50%);white-space:nowrap;font:500 10.5px/1.2 var(--f-body);color:#9aa5bd;text-shadow:0 1px 3px #000,0 0 6px #000;pointer-events:none;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.sk .rkb{position:absolute;top:-8px;right:-11px;font:600 8.5px/1 var(--f-mono);background:#0b1120;border:1px solid var(--c);color:var(--c);border-radius:4px;padding:2px 3px;pointer-events:none}
+.sk.on{background:var(--c);color:#0d1220;border-color:rgba(255,255,255,.75);box-shadow:0 0 10px var(--c),0 0 24px color-mix(in srgb,var(--c) 55%,transparent),inset 0 0 0 2px rgba(255,255,255,.25)}
+.sk.on .lb{color:#fff}
+.sk.open{border-color:var(--c);color:var(--c);background:#16203a;animation:skpulse 1.8s ease-in-out infinite}
+.sk.short,.sk.locked{opacity:.72}
+.sk.blocked{opacity:.32;border-color:#6a2b2b}
+.sk.blocked .ic{text-decoration:line-through}
+.sk.ph{border-style:dotted;border-color:#56607a;color:#56607a;background:transparent}
+.sk.root{width:44px;height:44px;border-radius:50%;margin:-5px 0 0 -5px;border-color:#e2ae4f;color:#ffd98a;box-shadow:0 0 22px rgba(226,174,79,.5)}
+.sk.sel{outline:2px solid #fff;outline-offset:3px;z-index:4}
+@keyframes skpulse{50%{box-shadow:0 0 14px var(--c),inset 0 0 0 2px rgba(0,0,0,.45)}}
+.hub{position:absolute;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 40% 35%,#4a3416,#1a130a);border:2px solid #e2ae4f;color:#ffd98a;font:700 18px var(--f-display);box-shadow:0 0 26px rgba(226,174,79,.55),0 0 60px rgba(226,174,79,.2)}
+@media (prefers-reduced-motion:reduce){.sk{transition:none;animation:none!important}.sk:hover{transform:none}}
+
+</style>
+
+<header class="top"><div class="top-in">
+  <a class="brand" href="#home">Party Codex</a>
+  <nav class="nav" id="nav">
+    <a href="#home" data-v="home">Home</a>
+    <a href="#characters" data-v="characters">Characters</a>
+    <a href="#trees" data-v="trees">Skill trees</a>
+    <a href="#worlds" data-v="worlds">Worlds</a>
+    <a href="#maps" data-v="maps">Maps</a>
+    <a href="#playmat" data-v="playmat">Play mat</a>
+    <a href="#shops" data-v="shops">Shops</a>
+    <a href="#tools" data-v="tools">Dice &amp; rules</a>
+    <a href="#news" data-v="news">D&amp;D news</a>
+  </nav>
+  <div class="role" id="roleSw" role="group" aria-label="Mode"></div>
+  <span class="save-pill" id="savePill">Connecting…</span>
+</div></header>
+<main id="app"></main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>(n===""||n==null||isNaN(n))?"—":Number(n).toLocaleString("en-US");
+const num=v=>{const n=parseFloat(String(v==null?"":v).replace(/,/g,""));return isNaN(n)?0:n;};
+const clone=o=>JSON.parse(JSON.stringify(o||{}));
+const rid=()=>Math.random().toString(36).slice(2,10).replace(/[^a-z0-9]/g,"x")+Math.random().toString(36).slice(2,4);
+const LS={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600);}
+function tier(r){r=String(r||"").trim();if(!r)return 0;if(/^\?/.test(r))return 6;if(/^Seq/i.test(r))return 3;if(/^(Z|U|Omega|EX)/i.test(r))return 5;if(/^S/.test(r))return 4;if(/^A/.test(r))return 3;if(/^B/.test(r))return 2;if(/^C/.test(r))return 1;return 0;}
+const chip=r=>r?`<span class="rk t${tier(r)}">${esc(r)}</span>`:"";
+const byUpdated=(a,b)=>(b.updatedAt||0)-(a.updatedAt||0);
+
+/* ================= defaults ================= */
+const DEFAULT_COSTS=[["F",5],["E",8],["D",10],["C",15],["B",25],["A-",55],["A",75],["A+",85],["AA",100],["S",120],["SS",150],["SSS",200],["Z",300],["Omega",500],["???",150]];
+const newChar=()=>({name:"",player:"",campaign:"",race:"",cls:"",level:1,levelCap:"",exp:0,expPer:100,gainSp:5,gainStat:3,sp:0,stat:0,hpCur:0,hpMax:0,enLabel:"MP",enCur:0,enMax:0,bio:"",
+ stats:[{k:"Strength",v:""},{k:"Dexterity",v:""},{k:"Defense",v:""},{k:"Magic ATK",v:""},{k:"Magic DEF",v:""},{k:"Speed",v:""},{k:"IQ",v:""},{k:"BIQ",v:""}],
+ tags:[],skills:[],moves:[],items:[],sections:[],notes:"",money:0,unlocked:{},createdAt:Date.now()});
+const newTree=()=>({name:"",campaign:"",blurb:"",lanes:[],nodes:[],createdAt:Date.now()});
+const newWorld=()=>({name:"",tag:"",blurb:"",sections:[],npcs:[],createdAt:Date.now()});
+
+/* ================= store ================= */
+const COLS=["characters","trees","worlds","settings","maps","mats","shops"];
+const S={mode:"loading",db:null,data:{characters:{},trees:{},worlds:{},settings:{},maps:{},mats:{},dm:{},tokens:{},shops:{}},note:""};
+function writeFail(e){ if(e&&e.code==="invalid_argument"&&S.db){ if(typeof CAP!=="undefined") CAP.readOnly=true; toast("You can't change that with your access. Ask the DM to invite you by email with edit access."); setTimeout(()=>render(true),0); } else toast("Couldn't save: "+((e&&e.message)||"unknown error")); }
+const chain={};
+function put(col,id,doc,quiet){ doc.updatedAt=Date.now(); S.data[col]=Object.assign({},S.data[col],{[id]:doc});
+ if(S.db){ const k=col+"/"+id; chain[k]=(chain[k]||Promise.resolve()).then(()=>S.db.collection(col).doc(id).set(doc)).catch(writeFail); }
+ else LS.set("codex2:"+col,S.data[col]);
+ if(!quiet) render(true); }
+function del(col,id){ const m=Object.assign({},S.data[col]); delete m[id]; S.data[col]=m;
+ if(S.db){ const k=col+"/"+id; chain[k]=(chain[k]||Promise.resolve()).then(()=>S.db.collection(col).doc(id).delete()).catch(writeFail); }
+ else LS.set("codex2:"+col,S.data[col]); }
+const chars=()=>Object.entries(S.data.characters).map(([id,c])=>Object.assign({id},c));
+const trees=()=>Object.entries(S.data.trees).map(([id,t])=>Object.assign({id},t));
+const worlds=()=>Object.entries(S.data.worlds).map(([id,w])=>Object.assign({id},w));
+const getC=id=>S.data.characters[id]?clone(S.data.characters[id]):null;
+const getT=id=>S.data.trees[id]?clone(S.data.trees[id]):null;
+const getW=id=>S.data.worlds[id]?clone(S.data.worlds[id]):null;
+const costs=()=>(S.data.settings.rules&&S.data.settings.rules.costs)||DEFAULT_COSTS.map(([r,c])=>({rank:r,cost:c}));
+function costOf(n){ if(n.cost!==""&&n.cost!=null&&!isNaN(n.cost)) return Number(n.cost);
+ const r=String(n.r||"").trim().toLowerCase(), tb=costs();
+ let hit=tb.find(x=>String(x.rank).trim().toLowerCase()===r); if(hit) return num(hit.cost);
+ const base=r.replace(/[+\-]+$/,""); hit=tb.find(x=>String(x.rank).trim().toLowerCase()===base); return hit?num(hit.cost):0; }
+
+async function initDb(){
+ let db=null; try{ db=window.claude&&window.claude.use?await window.claude.use("db"):null; }catch(e){ db=null; }
+ if(!db){ S.mode="local"; COLS.forEach(c=>S.data[c]=LS.get("codex2:"+c)||{}); render(true); return; }
+ S.db=db; S.mode="live";
+ const seen=new Set(); const timer=setTimeout(()=>{ if(seen.size<COLS.length){ S.note="Your party's data can't be reached yet. Anything you add will save once it connects."; render(); } },10000);
+ COLS.forEach(col=>db.collection(col).onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>m[d.id]=d.data()); S.data[col]=m;
+   if(!snap.metadata.fromCache){ seen.add(col); if(seen.size===COLS.length){ clearTimeout(timer); S.note=""; } } render(); },
+  err=>{ clearTimeout(timer); S.db=null; S.mode="local"; S.note="Live saving stopped ("+(err&&err.code)+"). New changes save in this browser only."; render(true); }));
+}
+
+/* ================= UI state ================= */
+const ui={q:"",camp:"all",treeChar:{},sel:{},editSel:{},dice:{n:1,d:20,mod:0,last:null,log:[]},editing:false};
+let pending=false;
+function typing(){ const a=document.activeElement; return a&&a.closest&&a.closest("#app")&&a.matches("textarea,input,select"); }
+
+/* ================= form bits ================= */
+const REPS={
+ stats:{cols:[["k","Stat"],["v","Value"]],grid:"minmax(0,1fr) minmax(0,1fr) auto"},
+ skills:{cols:[["rank","Rank"],["name","Skill name"],["desc","What it does",1]],grid:"6.5em minmax(0,1fr) minmax(0,1.6fr) auto"},
+ moves:{cols:[["name","Move or spell"],["cost","Cost"],["dmg","Damage"],["desc","What it does",1]],grid:"minmax(0,1fr) 8em 8em minmax(0,1.5fr) auto"},
+ items:{cols:[["name","Item"],["desc","What it does",1]],grid:"minmax(0,1fr) minmax(0,2fr) auto"},
+ sections:{cols:[["h","Heading"],["body","Text (start a line with - for a bullet)",1]],grid:"minmax(0,1fr) minmax(0,2.5fr) auto"},
+ npcs:{cols:[["name","Name"],["base","Based in"],["seen","First seen"],["top","Top stat"],["bio","Bio",1]],grid:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 6em minmax(0,1.8fr) auto"},
+ costs:{cols:[["rank","Rank"],["cost","Cost"]],grid:"minmax(0,1fr) minmax(0,1fr) auto"},
+ shopItems:{cols:[["id","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em auto minmax(0,1.6fr) auto"}
+};
+function repRow(name,r){ const R=REPS[name]; r=r||{};
+ return `<div class="rep-row" style="grid-template-columns:${R.grid}">${R.cols.map(([k,l,a])=>a==="hid"?`<input type="hidden" data-k="${k}" value="${esc(r[k])}">`:a==="chk"?`<label class="rep-chk"><input type="checkbox" data-k="${k}" ${r[k]&&r[k]!=="0"?"checked":""}> ${esc(l)}</label>`:a?`<textarea data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" rows="1">${esc(r[k])}</textarea>`:`<input type="text" data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" value="${esc(r[k])}">`).join("")}<button type="button" class="rep-del" data-act="rep-del" aria-label="Remove row">✕</button></div>`; }
+function repeater(name,rows,addLabel){ return `<div class="rep" data-rep="${name}">${(rows||[]).map(r=>repRow(name,r)).join("")}</div><div><button type="button" class="btn small" data-act="rep-add" data-rep="${name}">+ ${esc(addLabel||"Add row")}</button></div>`; }
+function collect(name){ return $$(`[data-rep="${name}"] .rep-row`).map(row=>{ const o={}; row.querySelectorAll("[data-k]").forEach(i=>o[i.dataset.k]=i.type==="checkbox"?(i.checked?"1":""):i.value.trim()); return o; }).filter(o=>Object.values(o).some(v=>v)); }
+const fld=(id,label,val,type,extra)=>`<label class="fld${extra&&extra.wide?" wide":""}"><span>${esc(label)}</span>${type==="area"?`<textarea id="${id}" placeholder="${esc(extra&&extra.ph||"")}">${esc(val)}</textarea>`:`<input type="${type||"text"}" id="${id}" value="${esc(val)}" placeholder="${esc(extra&&extra.ph||"")}"${type==="number"?' step="any"':""}>`}</label>`;
+const v=id=>{const e=$("#"+id);return e?e.value.trim():"";};
+function campOptions(){ const set=new Set([...chars(),...trees(),...worlds().map(w=>({campaign:w.name}))].map(x=>x.campaign).filter(Boolean)); return `<datalist id="camps">${[...set].map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`; }
+function bodyText(t){ const lines=String(t||"").split(/\n/); let h="",inList=false;
+ lines.forEach(l=>{ const m=l.match(/^\s*[-•*]\s+(.*)/); if(m){ if(!inList){h+='<ul class="dots">';inList=true;} h+=`<li>${esc(m[1])}</li>`; } else { if(inList){h+="</ul>";inList=false;} if(l.trim()) h+=`<p>${esc(l)}</p>`; } });
+ if(inList)h+="</ul>"; return h; }
+const emptyBox=(title,text,act,label)=>`<div class="empty"><h3>${esc(title)}</h3><p class="muted">${esc(text)}</p>${act?`<button class="btn primary ${["new-tree","new-world","new-map","new-mat"].includes(act)?"dm-only":""}" data-act="${act}">${esc(label)}</button>`:""}</div>`;
+const loading=()=>S.mode==="loading";
+
+/* ================= views: home ================= */
+function viewHome(){
+ const C=chars(),T=trees(),Wd=worlds();
+ return `<section class="hero"><span class="sigil">Your table's codex</span><h1>The Party Codex</h1>
+  <p class="lede">A blank book for your campaigns. Write up characters, build skill trees one skill at a time, and keep each world's lore and NPCs together. Everything you add saves for the whole party.</p>
+  <div class="actions"><button class="btn primary" data-act="new-char">New character</button><a class="btn" href="#ai-char">Create with AI</a><button class="btn dm-only" data-act="new-tree">New skill tree</button><button class="btn dm-only" data-act="new-world">New world</button><button class="btn dm-only" data-act="new-map">New map</button><a class="btn" href="#playmat">Play mat</a><a class="btn" href="#shops">Shops</a></div>
+  <p class="meta">${isDM()?"DM mode: you can build trees, worlds and maps and see DM notes. Switch to Player at the top to see what your table sees.":"Player mode: you can edit characters, spend skill points, move tokens on the play mat and buy from shops. Trees, worlds, maps and DM notes are the DM's."}</p>
+  <div class="counts"><span><b>${C.length}</b>characters</span><span><b>${T.length}</b>skill trees</span><span><b>${Wd.length}</b>worlds</span><span><b>${maps().length}</b>maps</span></div></section>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:`
+ <section class="section"><div class="section-head"><h2>Recent characters</h2><a href="#characters">All characters</a></div>
+  ${C.length?`<div class="grid">${C.sort(byUpdated).slice(0,6).map(charCard).join("")}</div>`:emptyBox("No characters yet","Start a sheet with a name, then fill in stats, skills, moves and items. HP, EXP and skill points are tracked as you play.","new-char","Create the first character")}</section>
+ <section class="section"><div class="section-head"><h2>Skill trees</h2><a href="#trees">All trees</a></div>
+  ${T.length?`<div class="grid">${T.sort(byUpdated).slice(0,6).map(treeCard).join("")}</div>`:emptyBox("No skill trees yet","Add skills one at a time with a rank, a cost and what they need first. Then pick a character and spend their points.","new-tree","Build the first tree")}</section>
+ <section class="section"><div class="section-head"><h2>Worlds</h2><a href="#worlds">All worlds</a></div>
+  ${Wd.length?`<div class="grid">${Wd.sort(byUpdated).slice(0,6).map(worldCard).join("")}</div>`:emptyBox("No worlds yet","Give each campaign a page for its places, factions, rules and NPCs.","new-world","Add the first world")}</section>`}`;
+}
+function charCard(c){ return `<a class="card char-card" href="#char-${c.id}"><span class="eyebrow">${esc(c.campaign||"No campaign")}${c.player?" · "+esc(c.player):""}</span><h3>${esc(c.name||"Unnamed character")}</h3>
+ <div class="line"><span>${esc([c.race,c.cls].filter(Boolean).join(" · ")||"—")}</span><span class="mono">Lv ${fmt(c.level)}</span></div>
+ ${c.hpMax?`<div class="line"><span>HP</span><span class="mono">${fmt(c.hpCur)} / ${fmt(c.hpMax)}</span></div>`:""}</a>`; }
+function treeCard(t){ return `<a class="card" href="#tree-${t.id}"><span class="eyebrow">${esc(t.campaign||"Skill tree")}</span><h3>${esc(t.name||"Untitled tree")}</h3><p class="meta">${(t.nodes||[]).length} skills${t.blurb?" · "+esc(t.blurb.slice(0,90)):""}</p></a>`; }
+function worldCard(w){ return `<a class="card" href="#world-${w.id}"><span class="eyebrow">${esc(w.tag||"World")}</span><h3>${esc(w.name||"Untitled world")}</h3><p class="meta">${esc((w.blurb||"No description yet.").slice(0,150))}</p></a>`; }
+
+/* ================= views: characters ================= */
+function viewCharacters(){
+ const all=chars(), q=ui.q.toLowerCase(); const campsList=[...new Set(all.map(c=>c.campaign).filter(Boolean))];
+ const list=all.filter(c=>(ui.camp==="all"||c.campaign===ui.camp)&&(!q||[c.name,c.player,c.race,c.cls,c.campaign].join(" ").toLowerCase().includes(q))).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+ return `<section class="section"><div class="section-head"><h2>Characters</h2><div class="actions"><a class="btn" href="#ai-char">Create with AI</a><button class="btn primary" data-act="new-char">New character</button></div></div>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:!all.length?emptyBox("No characters yet","Each sheet holds stats, skills, moves, items and a session tracker for HP, energy, EXP and points.","new-char","Create the first character"):`
+ <div class="filters"><input type="search" id="q" placeholder="Search by name, player, race or class" value="${esc(ui.q)}" aria-label="Search characters">
+ <select id="campSel" aria-label="Filter by campaign"><option value="all">All campaigns</option>${campsList.map(k=>`<option ${ui.camp===k?"selected":""}>${esc(k)}</option>`).join("")}</select></div>
+ <div class="grid">${list.map(charCard).join("")||`<p class="muted">No characters match that search.</p>`}</div>`}</section>`;
+}
+function meter(cls,label,cur,max){ const pct=max?Math.max(0,Math.min(100,cur/max*100)):0;
+ return `<div class="meter ${cls}"><div class="lbl"><span>${esc(label)}</span><span class="mono">${fmt(cur)} / ${fmt(max)}</span></div><div class="bar"><div class="fill" style="width:${pct}%"></div></div></div>`; }
+function viewChar(id){
+ const c=getC(id); if(!c) return notFound("character","characters");
+ const list=(arr,fn)=>`<div class="list">${arr.map(fn).join("")}</div>`;
+ const skillRow=s=>`<div class="li">${chip(s.rank||"—")}<span class="nm">${esc(s.name)}</span>${s.desc?`<span class="ds">${esc(s.desc)}</span>`:""}</div>`;
+ const moveRow=m=>`<div class="li nochip"><span class="nm">${esc(m.name)}</span>${m.desc?`<span class="ds">${esc(m.desc)}</span>`:""}${(m.cost||m.dmg)?`<span class="nums">${m.cost?"Cost "+esc(m.cost):""}${m.cost&&m.dmg?" · ":""}${m.dmg?"Dmg "+esc(m.dmg):""}</span>`:""}</div>`;
+ const itemRow=i=>`<div class="li nochip"><span class="nm">${esc(i.name)}</span>${i.desc?`<span class="ds">${esc(i.desc)}</span>`:""}</div>`;
+ const stats=(c.stats||[]).filter(s=>s.k||s.v);
+ const used=trees().filter(t=>(c.unlocked||{})[t.id]&&c.unlocked[t.id].length);
+ const W=worlds().find(w=>w.name&&w.name===c.campaign);
+ const nothing=!stats.length&&!(c.skills||[]).length&&!(c.moves||[]).length&&!(c.items||[]).length&&!c.bio;
+ const tracker=`<aside class="tracker" aria-label="Session tracker">
+  <div class="row" style="justify-content:space-between"><span class="eyebrow">Session tracker</span></div>
+  ${c.hpMax?`${meter("hp","HP",c.hpCur,c.hpMax)}<div class="adj"><input type="number" id="hpAmt" placeholder="Amount" aria-label="HP amount"><button class="btn small" data-act="hp-" data-c="${id}">Damage</button><button class="btn small" data-act="hp+" data-c="${id}">Heal</button></div>`:`<p class="meta">Set max HP in Edit to track damage.</p>`}
+  ${c.enMax?`${meter("mp",c.enLabel||"MP",c.enCur,c.enMax)}<div class="adj"><input type="number" id="enAmt" placeholder="Amount" aria-label="${esc(c.enLabel||"MP")} amount"><button class="btn small" data-act="en-" data-c="${id}">Spend</button><button class="btn small" data-act="en+" data-c="${id}">Restore</button></div>`:""}
+  ${(c.hpMax||c.enMax)?`<button class="btn small" data-act="rest" data-c="${id}">Full rest</button>`:""}
+  <hr style="border:0;border-top:1px solid var(--line);margin:0">
+  <div class="row" style="justify-content:space-between"><span><span class="eyebrow">Level</span> <span class="mono" style="font-size:1.3rem">${fmt(c.level)}</span>${c.levelCap?`<span class="muted mono"> / ${esc(c.levelCap)}</span>`:""}</span><span class="muted" style="font-size:.84rem">+${fmt(c.gainSp)} skill · +${fmt(c.gainStat)} stat per level</span></div>
+  ${meter("xp","EXP",c.exp,c.expPer)}
+  <div class="adj"><input type="number" id="xpAmt" placeholder="EXP" aria-label="EXP to add" style="width:90px"><button class="btn small" data-act="xp" data-c="${id}">Add EXP</button><button class="btn small" data-act="xp" data-v="10" data-c="${id}">+10</button><button class="btn small" data-act="xp" data-v="20" data-c="${id}">+20</button><button class="btn small" data-act="xp" data-v="40" data-c="${id}">+40</button></div>
+  <div class="row" style="justify-content:space-between"><span>Skill points</span><span class="row"><button class="btn small" data-act="sp" data-v="-1" data-c="${id}" aria-label="Remove a skill point">−</button><span class="mono">${fmt(c.sp)}</span><button class="btn small" data-act="sp" data-v="1" data-c="${id}" aria-label="Add a skill point">+</button></span></div>
+  <div class="row" style="justify-content:space-between"><span>Stat points</span><span class="row"><button class="btn small" data-act="st" data-v="-1" data-c="${id}" aria-label="Remove a stat point">−</button><span class="mono">${fmt(c.stat)}</span><button class="btn small" data-act="st" data-v="1" data-c="${id}" aria-label="Add a stat point">+</button></span></div>
+  <div class="row" style="justify-content:space-between"><span>Money</span><span class="mono">${fmt(num(c.money))}</span></div>
+  <div class="adj"><input type="number" id="moneyAmt" placeholder="Amount" aria-label="Money amount"><button class="btn small" data-act="money+" data-c="${id}">Add</button><button class="btn small" data-act="money-" data-c="${id}">Spend</button></div>
+  <label class="eyebrow" for="notes">Notes</label>
+  <textarea id="notes" data-c="${id}" placeholder="Loot, debts, who owes who a favor…">${esc(c.notes||"")}</textarea>
+ </aside>`;
+ return `<a href="#characters" class="muted">← All characters</a>
+ <section class="sheet-head"><span class="eyebrow">${W?`<a href="#world-${W.id}">${esc(c.campaign)}</a>`:esc(c.campaign||"No campaign")}${c.player?" · played by "+esc(c.player):""}</span>
+  <div class="row" style="justify-content:space-between"><h1>${esc(c.name||"Unnamed character")}</h1><a class="btn" href="#edit-char-${id}">Edit sheet</a></div>
+  <div class="row">${c.race?`<span class="tag">${esc(c.race)}</span>`:""}${c.cls?`<span class="tag">${esc(c.cls)}</span>`:""}<span class="tag mono">Lv ${fmt(c.level)}${c.levelCap?" / "+esc(c.levelCap):""}</span>${used.map(t=>`<a class="tag" href="#tree-${t.id}">Tree: ${esc(t.name||"Untitled")}</a>`).join("")}</div>
+  ${c.bio?`<p class="lede">${esc(c.bio)}</p>`:""}</section>
+ <div class="sheet"><div class="section" style="min-width:0">
+  ${nothing?emptyBox("This sheet is blank","Add stats, skills, moves and items to fill it in.",null,"")+`<div><a class="btn primary" href="#edit-char-${id}">Fill in the sheet</a></div>`:""}
+  ${stats.length?`<div class="stats">${stats.map(s=>`<div class="stat"><span class="k">${esc(s.k)}</span><span class="v">${esc(s.v||"—")}</span></div>`).join("")}</div>`:""}
+  ${(c.tags||[]).length?`<div class="row">${c.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
+  ${(c.skills||[]).length?`<div class="section"><div class="section-head"><h2>Skills</h2><span class="muted">${c.skills.length}</span></div>${list(c.skills,skillRow)}</div>`:""}
+  ${(c.moves||[]).length?`<div class="section"><div class="section-head"><h2>Moves &amp; spells</h2><span class="muted">${c.moves.length}</span></div>${list(c.moves,moveRow)}</div>`:""}
+  ${(c.items||[]).length?`<div class="section"><div class="section-head"><h2>Items</h2></div>${list(c.items,itemRow)}</div>`:""}
+  ${(c.sections||[]).map(x=>`<div class="section"><div class="section-head"><h2>${esc(x.h||"Notes")}</h2></div><div class="card">${bodyText(x.body)}</div></div>`).join("")}
+  ${dmBox("char-"+id)}
+ </div>${tracker}</div>`;
+}
+function editChar(id){
+ const c=getC(id); if(!c) return notFound("character","characters");
+ return `<a href="#char-${id}" class="muted">← Back to sheet</a>
+ <section class="sheet-head"><span class="eyebrow">Editing</span><h1>${esc(c.name||"New character")}</h1></section>
+ <form class="form" id="charForm" data-id="${id}" onsubmit="return false">${campOptions()}
+  <div class="fieldset"><h3>Basics</h3><div class="form-grid">
+   ${fld("f-name","Name",c.name,"text",{ph:"Character name"})}${fld("f-player","Player",c.player)}
+   <label class="fld"><span>Campaign</span><input type="text" id="f-campaign" list="camps" value="${esc(c.campaign)}" placeholder="Match a world's name to link it"></label>
+   ${fld("f-race","Race",c.race)}${fld("f-cls","Class",c.cls)}
+   ${fld("f-bio","Bio",c.bio,"area",{wide:1,ph:"Who they are, in a sentence or two"})}
+   ${fld("f-tags","Magic types or tags (comma separated)",(c.tags||[]).join(", "),"text",{wide:1,ph:"Fire, Shadow, Time"})}
+  </div></div>
+  <div class="fieldset"><h3>Health and energy</h3><div class="form-grid">
+   ${fld("f-hpCur","Current HP",c.hpCur,"number")}${fld("f-hpMax","Max HP",c.hpMax,"number")}
+   ${fld("f-enLabel","Energy name",c.enLabel,"text",{ph:"MP, Mana, Chakra, Chi"})}${fld("f-enCur","Current energy",c.enCur,"number")}${fld("f-enMax","Max energy",c.enMax,"number")}
+  </div></div>
+  <div class="fieldset"><h3>Progression</h3><div class="form-grid">
+   ${fld("f-level","Level",c.level,"number")}${fld("f-levelCap","Level cap",c.levelCap,"text",{ph:"100"})}${fld("f-exp","EXP",c.exp,"number")}${fld("f-expPer","EXP per level",c.expPer,"number")}
+   ${fld("f-money","Money",c.money||0,"number")}${fld("f-sp","Skill points",c.sp,"number")}${fld("f-stat","Stat points",c.stat,"number")}${fld("f-gainSp","Skill points per level",c.gainSp,"number")}${fld("f-gainStat","Stat points per level",c.gainStat,"number")}
+  </div></div>
+  <div class="fieldset"><h3>Stats</h3><p class="edit-hint">Use any stats your system has. Values can be numbers or letter ranks.</p>${repeater("stats",c.stats,"Add stat")}</div>
+  <div class="fieldset"><h3>Skills</h3><p class="edit-hint">Rank is free text: C, B, A-, SS, Z+, Seq 9, whatever your game uses.</p>${repeater("skills",c.skills,"Add skill")}</div>
+  <div class="fieldset"><h3>Moves and spells</h3>${repeater("moves",c.moves,"Add move")}</div>
+  <div class="fieldset"><h3>Items</h3>${repeater("items",c.items,"Add item")}</div>
+  <div class="fieldset"><h3>Extra sections</h3><p class="edit-hint">Passives, summons, transformations, backstory, anything else.</p>${repeater("sections",c.sections,"Add section")}</div>
+  <div class="actions"><button type="button" class="btn primary" data-act="save-char" data-id="${id}">Save sheet</button><a class="btn" href="#char-${id}">Cancel</a><span style="flex:1"></span><button type="button" class="btn danger" data-act="del" data-col="characters" data-id="${id}">Delete character</button></div>
+ </form>`;
+}
+
+/* ================= skill trees ================= */
+const TW=200,TH=104,NW=168,NH=74,PX=24,PY=34;
+function exMap(t){ const m={}; (t.nodes||[]).forEach(n=>(n.ex||[]).forEach(o=>{ (m[n.id]=m[n.id]||new Set()).add(o); (m[o]=m[o]||new Set()).add(n.id); })); return m; }
+function treeState(t,un,points){ const st={}, ex=exMap(t);
+ (t.nodes||[]).forEach(n=>{ if(un.has(n.id)){st[n.id]="on";return;} if(n.ph){st[n.id]="ph";return;}
+  if(ex[n.id]&&[...ex[n.id]].some(x=>un.has(x))){st[n.id]="blocked";return;}
+  const ok=(n.req||[]).every(r=>un.has(r))&&(!(n.any&&n.any.length)||n.any.some(r=>un.has(r)));
+  st[n.id]=!ok?"locked":(costOf(n)<=points?"open":"short"); }); return st; }
+function canRefund(t,un,id){ return !(t.nodes||[]).some(m=>un.has(m.id)&&m.id!==id&&(((m.req||[]).includes(id))||(m.any&&m.any.includes(id)&&!m.any.some(a=>a!==id&&un.has(a))))); }
+const BRANCH_COLORS=["#b77cf2","#f39a2b","#3fc7e8","#5fd06a","#f4c84a","#ef5a5a","#5b8cff","#e86cc0","#40d9b0","#d98a5b"];
+function radial(t){
+ const nodes=t.nodes||[]; const map={}; nodes.forEach(n=>map[n.id]=n);
+ const parents=n=>[...(n.req||[]),...(n.any||[])].filter(r=>map[r]&&r!==n.id);
+ const depth={}; const dfs=(n,stack)=>{ if(depth[n.id]!=null) return depth[n.id]; if(stack.has(n.id)) return 0; stack.add(n.id); const ps=parents(n); const d=ps.length?Math.max(...ps.map(p=>dfs(map[p],stack)+1)):0; stack.delete(n.id); depth[n.id]=d; return d; };
+ nodes.forEach(n=>dfs(n,new Set()));
+ const kids={}; let roots=[];
+ nodes.forEach(n=>{ const ps=parents(n); const p=ps.sort((a,b)=>depth[b]-depth[a])[0]; if(p) (kids[p]=kids[p]||[]).push(n); else roots.push(n); });
+ const leaves={}, seen=new Set(); const cnt=n=>{ if(seen.has(n.id)) return leaves[n.id]||1; seen.add(n.id); const k=(kids[n.id]||[]).filter(c=>!seen.has(c.id)); leaves[n.id]=k.length?k.reduce((a,c)=>a+cnt(c),0):1; return leaves[n.id]; };
+ roots.forEach(cnt); nodes.forEach(n=>{ if(!seen.has(n.id)){ roots.push(n); cnt(n); } });
+ let hub=null, shift=0;
+ if(roots.length===1&&(kids[roots[0].id]||[]).length>1){ hub=roots[0]; roots=kids[hub.id]; shift=1; }
+ const total=roots.reduce((a,r)=>a+(leaves[r.id]||1),0)||1;
+ const pos={}, branch={}, placed=new Set();
+ const place=(n,from,to,b)=>{ if(placed.has(n.id)) return; placed.add(n.id); branch[n.id]=b; const k=(kids[n.id]||[]).filter(c=>!placed.has(c.id)); let s=from; const tot=k.reduce((a,c)=>a+(leaves[c.id]||1),0)||1;
+  k.forEach(c=>{ const w=(to-from)*(leaves[c.id]||1)/tot; place(c,s,s+w,b); s+=w; }); pos[n.id]={a:(from+to)/2,d:Math.max(0,depth[n.id]-shift)}; };
+ const first=roots[0]?(Math.PI*2*(leaves[roots[0].id]||1)/total):0; let a0=-Math.PI/2-first/2; const gap=roots.length>1?.1:0;
+ roots.forEach((r,i)=>{ const w=Math.PI*2*(leaves[r.id]||1)/total; place(r,a0+gap/2,a0+w-gap/2,i); a0+=w; });
+ if(hub){ pos[hub.id]={a:0,d:-1}; branch[hub.id]=-1; }
+ const maxD=Math.max(0,...Object.values(pos).map(p=>p.d));
+ return {pos,branch,hub,roots,total,maxD,map}; }
+function canvas(t,st,selId,mode,tid){
+ const L=radial(t), nodes=t.nodes||[]; const STEP=82;
+ const R0=Math.max(L.hub?96:110,(L.total*58)/(Math.PI*2));
+ const Rmax=R0+L.maxD*STEP+80; const W=Math.max(640,Math.round(Rmax*2)), H=Math.max(560,Math.round(Rmax*2)), cx=W/2, cy=H/2;
+ const xy=id=>{ const p=L.pos[id]; if(!p) return [cx,cy]; if(p.d<0) return [cx,cy]; const r=R0+p.d*STEP; return [cx+Math.cos(p.a)*r,cy+Math.sin(p.a)*r]; };
+ const col=id=>{ const b=L.branch[id]; return b==null||b<0?"#e2ae4f":BRANCH_COLORS[b%BRANCH_COLORS.length]; };
+ const isOn=id=>mode!=="edit"&&st[id]==="on";
+ let edges="";
+ const line=(a,b,on,c,dash)=>{ edges+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" class="sky-edge ${on?"on":""}" style="--c:${c}"${dash?' stroke-dasharray="4 4"':""}/>`; };
+ nodes.forEach(n=>{ const ps=[...(n.req||[]).map(r=>[r,0]),...(n.any||[]).map(r=>[r,1])].filter(([r])=>L.map[r]);
+  if(!ps.length&&(!L.hub||n.id!==L.hub.id)) line([cx,cy],xy(n.id),isOn(n.id),col(n.id));
+  ps.forEach(([r,dash])=>line(xy(r),xy(n.id),isOn(r)&&isOn(n.id),col(n.id),dash)); });
+ const initials=s=>String(s||"?").replace(/[^\p{L}\p{N} ]/gu,"").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?";
+ const nh=nodes.map(n=>{ const [x,y]=xy(n.id); const s=mode==="edit"?"":st[n.id]; const isHub=L.hub&&n.id===L.hub.id;
+  return `<button class="sk ${s} ${n.ph?"ph":""} ${isHub?"root":""} ${selId===n.id?"sel":""}" style="left:${(x-17).toFixed(1)}px;top:${(y-17).toFixed(1)}px;--c:${col(n.id)}" data-act="${mode==="edit"?"esel":"sel"}" data-t="${tid}" data-n="${n.id}" title="${esc(n.n||"Unnamed")}${n.r?" · "+esc(n.r):""}${mode==="edit"?"":s==="on"?" · unlocked":n.ph?"":" · "+costOf(n)+" pts"}" aria-label="${esc(n.n||"Unnamed")}, ${s==="on"?"unlocked":s||"skill"}"><span class="ic">${esc(n.icon||initials(n.n))}</span>${n.r?`<span class="rkb">${esc(n.r)}</span>`:""}<span class="lb">${esc(n.n||"Unnamed")}</span></button>`; }).join("");
+ const C=mode==="edit"?null:($("#tc")&&S.data.characters[$("#tc").value])||null;
+ const hubLabel=L.hub?"":`<div class="hub" style="left:${cx-29}px;top:${cy-29}px" aria-hidden="true">${esc(initials(mode==="edit"?t.name:(ui.treeChar[tid]&&S.data.characters[ui.treeChar[tid]]?S.data.characters[ui.treeChar[tid]].name:(chars()[0]||{}).name)||t.name))}</div>`;
+ return `<div class="sky canvas-frame" id="cf-${tid}" data-w="${W}" data-h="${H}"><div class="sky-in" style="width:${W}px;height:${H}px"><canvas id="treebg" width="${W}" height="${H}" aria-hidden="true"></canvas><svg width="${W}" height="${H}" aria-hidden="true">${edges}</svg>${hubLabel}${nh}</div></div>`;
+}
+const _skyCache={};
+function drawSky(cv){ const W=cv.width, H=cv.height, key=W+"x"+H; const x=cv.getContext("2d");
+ if(_skyCache[key]){ x.drawImage(_skyCache[key],0,0); return; }
+ const off=document.createElement("canvas"); off.width=W; off.height=H; const g=off.getContext("2d"); const rnd=rng(W*7+H);
+ const sky=g.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#0a1020"); sky.addColorStop(.55,"#18233a"); sky.addColorStop(.8,"#26314b"); sky.addColorStop(1,"#1a2233"); g.fillStyle=sky; g.fillRect(0,0,W,H);
+ for(let i=0;i<9;i++){ g.fillStyle=`rgba(${120+rnd()*60},${140+rnd()*60},${190+rnd()*40},.05)`; g.beginPath(); g.ellipse(rnd()*W,rnd()*H*.6,120+rnd()*220,30+rnd()*50,rnd()*.4-.2,0,7); g.fill(); }
+ for(let i=0;i<Math.round(W*H/2600);i++){ const s=rnd()<.92?1:2; g.fillStyle=`rgba(255,${235+rnd()*20},${200+rnd()*55},${.25+rnd()*.6})`; g.fillRect(Math.round(rnd()*W),Math.round(rnd()*H*.75),s,s); }
+ const ridge=(base,amp,col,seed)=>{ const r=rng(seed); g.fillStyle=col; g.beginPath(); g.moveTo(0,H); let y=base; for(let px=0;px<=W;px+=8){ y+= (r()-.5)*amp; y=Math.max(base-amp*4,Math.min(base+amp*3,y)); g.lineTo(px,y); } g.lineTo(W,H); g.closePath(); g.fill(); };
+ ridge(H*.68,26,"#1c263b",11); ridge(H*.76,22,"#151d2e",23); ridge(H*.86,14,"#0f1522",37);
+ const tx=W-110, ty=H*.52; g.fillStyle="#0e1420"; g.fillRect(tx,ty,64,H-ty); for(let i=0;i<5;i++) g.fillRect(tx-4+i*15,ty-12,9,12); g.fillRect(tx-40,ty+70,40,H-ty-70); for(let i=0;i<3;i++) g.fillRect(tx-44+i*14,ty+60,8,10);
+ g.fillStyle="rgba(255,190,90,.75)"; [[tx+16,ty+40],[tx+38,ty+90],[tx+16,ty+140]].forEach(([a,b])=>g.fillRect(a,b,6,9));
+ const fx=W/2, fy=H-46; const glow=g.createRadialGradient(fx,fy,4,fx,fy,190); glow.addColorStop(0,"rgba(255,170,70,.55)"); glow.addColorStop(.4,"rgba(255,120,40,.18)"); glow.addColorStop(1,"rgba(255,120,40,0)"); g.fillStyle=glow; g.fillRect(fx-200,fy-200,400,260);
+ g.fillStyle="#2a1d14"; g.fillRect(fx-14,fy+8,28,5); g.fillStyle="#ff9a2e"; g.beginPath(); g.moveTo(fx-9,fy+9); g.lineTo(fx,fy-16); g.lineTo(fx+9,fy+9); g.fill(); g.fillStyle="#ffe07a"; g.beginPath(); g.moveTo(fx-4,fy+9); g.lineTo(fx,fy-4); g.lineTo(fx+4,fy+9); g.fill();
+ g.fillStyle="#3a3024"; g.beginPath(); g.moveTo(fx-92,fy+14); g.lineTo(fx-62,fy-22); g.lineTo(fx-32,fy+14); g.fill(); g.fillStyle="rgba(255,170,80,.35)"; g.beginPath(); g.moveTo(fx-62,fy-22); g.lineTo(fx-32,fy+14); g.lineTo(fx-50,fy+14); g.fill(); g.fillStyle="#120d09"; g.beginPath(); g.moveTo(fx-68,fy+14); g.lineTo(fx-62,fy-2); g.lineTo(fx-56,fy+14); g.fill();
+ _skyCache[key]=off; x.drawImage(off,0,0); }
+
+function viewTrees(){ const T=trees();
+ return `<section class="section"><div class="section-head"><h2>Skill trees</h2><button class="btn primary dm-only" data-act="new-tree">New skill tree</button></div>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:T.length?`<p class="lede">Open a tree, pick whose build it is, and click a skill to spend that character's points. Use Edit tree to add or change skills.</p><div class="grid">${T.sort(byUpdated).map(treeCard).join("")}</div>`:emptyBox("No skill trees yet","Build a tree one skill at a time: give each a rank, a cost and the skills it needs first. Players then unlock skills with their character's skill points.","new-tree","Build the first tree")}</section>`; }
+function viewTree(id){
+ const t=getT(id); if(!t) return notFound("skill tree","trees");
+ const C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+ const cid=(ui.treeChar[id]&&S.data.characters[ui.treeChar[id]])?ui.treeChar[id]:(C[0]&&C[0].id); const c=cid?getC(cid):null;
+ const un=new Set(c&&c.unlocked&&c.unlocked[id]||[]); const pts=c?num(c.sp):0; const st=treeState(t,un,pts);
+ const map={}; (t.nodes||[]).forEach(n=>map[n.id]=n); const sel=map[ui.sel[id]]; const ex=exMap(t);
+ let detail=`<div class="card"><span class="eyebrow">Selected skill</span><p class="muted">Click a skill to see what it does${c?" and unlock it":""}.</p></div>`;
+ if(sel){ const s=st[sel.id], cost=costOf(sel); const nm=a=>(a||[]).map(r=>map[r]&&map[r].n).filter(Boolean); const exN=ex[sel.id]?[...ex[sel.id]].map(r=>map[r]&&map[r].n).filter(Boolean):[];
+  let act=""; if(!c) act=`<p class="muted">Create a character to spend points here.</p>`;
+  else if(s==="on") act=canRefund(t,un,sel.id)?`<button class="btn" data-act="refund" data-t="${id}" data-n="${sel.id}">Refund ${cost} points</button>`:`<p class="muted">Refund the skills that need this one first.</p>`;
+  else if(s==="open") act=`<button class="btn primary" data-act="unlock" data-t="${id}" data-n="${sel.id}">Unlock for ${cost} points</button>`;
+  else if(s==="short") act=`<p class="muted">Needs ${cost} points. ${esc(c.name||"This character")} has ${fmt(pts)}.</p>`;
+  else if(s==="blocked") act=`<p class="muted">Blocked: ${esc(exN.join(", "))} is already unlocked.</p>`;
+  else if(s==="ph") act=`<p class="muted">Blank slot. Name it in Edit tree.</p>`;
+  else act=`<p class="muted">Unlock its prerequisites first.</p>`;
+  detail=`<div class="card"><span class="eyebrow">Selected skill</span><div class="row">${chip(sel.r||"—")}<h3>${esc(sel.n||"Unnamed")}</h3></div>${sel.d?`<p>${esc(sel.d)}</p>`:""}
+  ${nm(sel.req).length?`<p class="meta">Needs: ${esc(nm(sel.req).join(" + "))}</p>`:""}${nm(sel.any).length?`<p class="meta">Needs any one of: ${esc(nm(sel.any).join(", "))}</p>`:""}${exN.length?`<p class="meta">Can't be combined with: ${esc(exN.join(", "))}</p>`:""}${act}</div>`; }
+ const head=`<a href="#trees" class="muted">← All skill trees</a>
+ <section class="sheet-head"><span class="eyebrow">${esc(t.campaign||"Skill tree")}</span><div class="row" style="justify-content:space-between"><h1>${esc(t.name||"Untitled tree")}</h1><a class="btn dm-only" href="#edit-tree-${id}">Edit tree</a></div>${t.blurb?`<p class="lede">${esc(t.blurb)}</p>`:""}</section>`;
+ if(!(t.nodes||[]).length) return head+emptyBox("This tree has no skills yet","Open the editor to add the first skill.",null,"")+`<div class="dm-only"><a class="btn primary" href="#edit-tree-${id}">Add skills</a></div>`;
+ return head+`<div class="tree-wrap">${canvas(t,st,ui.sel[id],"play",id)}
+ <aside class="side">
+  <div class="card">${C.length?`<label class="eyebrow" for="tc">Build for</label><select id="tc" data-t="${id}">${C.map(o=>`<option value="${o.id}" ${o.id===cid?"selected":""}>${esc(o.name||"Unnamed character")}</option>`).join("")}</select>
+   <div class="row" style="justify-content:space-between;align-items:end"><div><span class="eyebrow">Skill points</span><div class="points">${fmt(pts)}</div></div><div class="row"><button class="btn small" data-act="sp" data-v="-5" data-c="${cid}">−5</button><button class="btn small" data-act="sp" data-v="5" data-c="${cid}">+5</button></div></div>
+   <p class="meta">${un.size} of ${(t.nodes||[]).filter(n=>!n.ph).length} unlocked · <a href="#char-${cid}">Open sheet</a></p>`:`<p class="muted">No characters yet. Create one to spend points in this tree.</p><div><button class="btn primary" data-act="new-char">New character</button></div>`}</div>
+  ${detail}
+  <div class="card legend"><span class="eyebrow">Key</span>
+   <span><span class="sw" style="border-color:var(--arcane);background:var(--arcane-soft)"></span>Unlocked</span>
+   <span><span class="sw" style="border-color:var(--brass);border-style:dashed"></span>Ready to unlock</span>
+   <span><span class="sw" style="opacity:.6"></span>Needs prerequisites or more points</span>
+   <span><span class="sw" style="opacity:.38"></span>Blocked by a choice already made</span>
+   <span><span class="sw" style="border-style:dotted"></span>Blank slot</span>
+   <span class="meta">Dashed lines mean "any one of these." Costs come from <a href="#tools">the cost table</a> unless a skill sets its own.</span></div>
+ </aside></div>`;
+}
+function nextRow(t,col,skip){ const used=new Set((t.nodes||[]).filter(n=>num(n.c)===col&&n.id!==skip).map(n=>num(n.y))); let r=0; while(used.has(r)) r++; return r; }
+function editTree(id){
+ const t=getT(id); if(!t) return notFound("skill tree","trees");
+ const nodes=t.nodes||[]; const sel=nodes.find(n=>n.id===ui.editSel[id]); const n=sel||{n:"",r:"",cost:"",d:"",c:"",y:"",req:[],any:[],ex:[],ph:false};
+ const others=nodes.filter(o=>!sel||o.id!==sel.id);
+ const checks=(name,arr)=>others.length?`<div class="checks">${others.map(o=>`<label><input type="checkbox" data-chk="${name}" value="${o.id}" ${(arr||[]).includes(o.id)?"checked":""}> ${esc(o.n||"Unnamed")}</label>`).join("")}</div>`:`<p class="edit-hint">Add another skill first.</p>`;
+ return `<a href="#tree-${id}" class="muted">← Back to tree</a>
+ <section class="sheet-head"><span class="eyebrow">Editing skill tree</span><h1>${esc(t.name||"New skill tree")}</h1></section>
+ <form class="fieldset" onsubmit="return false">${campOptions()}<h3>Tree details</h3><div class="form-grid">
+  ${fld("t-name","Tree name",t.name,"text",{ph:"Path of the Shadow Monarch"})}
+  <label class="fld"><span>Campaign</span><input type="text" id="t-campaign" list="camps" value="${esc(t.campaign)}"></label>
+  ${fld("t-blurb","Description",t.blurb,"area",{wide:1,ph:"What this tree is and who it's for"})}
+
+ </div><div class="actions"><button type="button" class="btn primary" data-act="save-tree-meta" data-id="${id}">Save details</button><a class="btn" href="#tree-${id}">Done editing</a><span style="flex:1"></span><button type="button" class="btn danger" data-act="del" data-col="trees" data-id="${id}">Delete tree</button></div></form>
+ <div class="tree-wrap">
+  ${nodes.length?canvas(t,{},ui.editSel[id],"edit",id):`<div class="empty"><h3>No skills yet</h3><p class="muted">Fill in the form to add the first skill. Leave column and row blank and it places itself.</p></div>`}
+  <aside class="side"><form class="fieldset" onsubmit="return false" id="nodeForm"><h3>${sel?"Edit skill":"Add a skill"}</h3>
+   ${nodes.length?`<p class="edit-hint">${sel?"Editing the highlighted skill.":"Click a skill in the tree to edit it."}</p>`:""}
+   <div class="form-grid" style="grid-template-columns:1fr 1fr">
+    ${fld("n-name","Skill name",n.n,"text",{wide:1,ph:"Fireball"})}
+    ${fld("n-rank","Rank",n.r,"text",{ph:"B, A-, SS…"})}${fld("n-cost","Cost (blank = from table)",n.cost,"number")}
+    ${fld("n-desc","What it does",n.d,"area",{wide:1})}
+    ${fld("n-icon","Icon: 1 to 2 letters or a symbol",n.icon||"","text",{ph:"Auto from the name",wide:1})}
+   </div>
+   <div class="fld"><span>Needs all of these first</span>${checks("req",n.req)}</div>
+   <div class="fld"><span>Or needs any one of these</span>${checks("any",n.any)}</div>
+   <div class="fld"><span>Can't be combined with</span>${checks("ex",n.ex)}</div>
+   <div class="checks"><label><input type="checkbox" id="n-ph" ${n.ph?"checked":""}> Blank slot (can't be unlocked yet)</label></div>
+   <div class="actions"><button type="button" class="btn primary" data-act="save-node" data-id="${id}">${sel?"Save skill":"Add skill"}</button>
+   ${sel?`<button type="button" class="btn" data-act="new-node" data-id="${id}">New skill</button><button type="button" class="btn danger" data-act="del-node" data-id="${id}">Delete skill</button>`:""}</div>
+  </form></aside></div>`;
+}
+
+/* ================= worlds ================= */
+function viewWorlds(){ const Wd=worlds();
+ return `<section class="section"><div class="section-head"><h2>Worlds</h2><button class="btn primary dm-only" data-act="new-world">New world</button></div>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:Wd.length?`<div class="grid">${Wd.sort(byUpdated).map(worldCard).join("")}</div>`:emptyBox("No worlds yet","A world page holds a campaign's description, its places and rules as sections, and an NPC table. Characters and trees with the same campaign name show up on it.","new-world","Add the first world")}</section>`; }
+function viewWorld(id){
+ const w=getW(id); if(!w) return notFound("world","worlds");
+ const C=chars().filter(c=>w.name&&c.campaign===w.name), T=trees().filter(t=>w.name&&t.campaign===w.name);
+ const blank=!w.blurb&&!(w.sections||[]).length&&!(w.npcs||[]).length;
+ return `<a href="#worlds" class="muted">← All worlds</a>
+ <section class="sheet-head"><span class="eyebrow">${esc(w.tag||"World")}</span><div class="row" style="justify-content:space-between"><h1>${esc(w.name||"Untitled world")}</h1><a class="btn dm-only" href="#edit-world-${id}">Edit world</a></div>${w.blurb?`<div class="lede prose">${bodyText(w.blurb)}</div>`:""}</section>
+ ${blank?emptyBox("This world is blank","Add a description, sections for places, factions and rules, and the NPCs your party has met.",null,"")+`<div class="dm-only"><a class="btn primary" href="#edit-world-${id}">Fill in the world</a></div>`:""}
+ ${C.length?`<div class="section"><div class="section-head"><h2>Characters</h2></div><div class="grid">${C.map(charCard).join("")}</div></div>`:""}
+ ${T.length?`<div class="section"><div class="section-head"><h2>Skill trees</h2></div><div class="grid">${T.map(treeCard).join("")}</div></div>`:""}
+ ${(w.sections||[]).map(s=>`<div class="section"><div class="section-head"><h2>${esc(s.h||"Untitled section")}</h2></div><div class="card prose">${bodyText(s.body)}</div></div>`).join("")}
+ ${(w.npcs||[]).length?`<div class="section"><div class="section-head"><h2>NPCs</h2><span class="muted">${w.npcs.length}</span></div><div class="tbl-wrap"><table><thead><tr><th>NPC</th><th>Based in</th><th>First seen</th><th>Top stat</th><th>Bio</th></tr></thead><tbody>${w.npcs.map(n=>`<tr><td><b>${esc(n.name)}</b></td><td>${esc(n.base)}</td><td>${esc(n.seen)}</td><td>${esc(n.top)}</td><td class="muted">${esc(n.bio)}</td></tr>`).join("")}</tbody></table></div></div>`:""}${dmBox("world-"+id)}`;
+}
+function editWorld(id){
+ const w=getW(id); if(!w) return notFound("world","worlds");
+ return `<a href="#world-${id}" class="muted">← Back to world</a>
+ <section class="sheet-head"><span class="eyebrow">Editing world</span><h1>${esc(w.name||"New world")}</h1></section>
+ <form class="form" onsubmit="return false">
+  <div class="fieldset"><h3>Basics</h3><div class="form-grid">
+   ${fld("w-name","World or campaign name",w.name,"text",{ph:"Characters with this campaign name link here"})}${fld("w-tag","Tagline",w.tag,"text",{ph:"Steampunk epic fantasy"})}
+   ${fld("w-blurb","Description",w.blurb,"area",{wide:1,ph:"The pitch: what this world is about"})}</div></div>
+  <div class="fieldset"><h3>Sections</h3><p class="edit-hint">Locations, factions, magic, rules, session log. Start a line with - to make a bullet.</p>${repeater("sections",w.sections,"Add section")}</div>
+  <div class="fieldset"><h3>NPCs</h3>${repeater("npcs",w.npcs,"Add NPC")}</div>
+  <div class="actions"><button type="button" class="btn primary" data-act="save-world" data-id="${id}">Save world</button><a class="btn" href="#world-${id}">Cancel</a><span style="flex:1"></span><button type="button" class="btn danger" data-act="del" data-col="worlds" data-id="${id}">Delete world</button></div>
+ </form>`;
+}
+function notFound(kind,back){ return `<div class="empty"><h3>That ${kind} isn't here</h3><p class="muted">It may have been deleted${loading()?", or the codex is still opening":""}.</p><a class="btn" href="#${back}">Back</a></div>`; }
+
+/* ================= tools ================= */
+function roll(d){ const a=new Uint32Array(1); crypto.getRandomValues(a); return 1+(a[0]%d); }
+function viewTools(){ const D=ui.dice, last=D.last; let cls=""; if(last&&last.n===1&&last.d===20){ if(last.rolls[0]===20)cls="crit"; else if(last.rolls[0]===1)cls="fail"; }
+ return `<section class="section"><div class="section-head"><h2>Dice</h2></div>
+ <div class="split"><div class="card" style="gap:12px">
+  <div class="die-row" role="group" aria-label="Die">${[4,6,8,10,12,20,100].map(d=>`<button class="btn ${D.d===d?"on":""}" data-act="die" data-v="${d}">d${d}</button>`).join("")}</div>
+  <div class="row"><label for="dn">Dice</label><input type="number" id="dn" min="1" max="50" value="${D.n}" style="width:76px"><label for="dm">Modifier</label><input type="number" id="dm" value="${D.mod}" style="width:86px"><button class="btn primary" data-act="roll">Roll</button></div>
+  <div><div class="dice-out ${cls}">${last?fmt(last.total):"—"}</div><p class="muted mono" style="margin-top:6px">${last?esc(last.label):"Pick a die and roll."}${cls==="crit"?" · Natural 20!":cls==="fail"?" · Natural 1":""}</p></div></div>
+  <div class="card"><span class="eyebrow">This session</span>${D.log.length?`<div class="log">${D.log.map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:`<p class="muted">Rolls show up here.</p>`}</div></div></section>
+ <section class="section"><div class="section-head"><h2>Skill cost table</h2></div>
+  <div class="split"><form class="fieldset" onsubmit="return false"><p class="edit-hint">Skill trees price each skill by its rank here unless the skill sets its own cost. Ranks match exactly; A+ falls back to A if A+ isn't listed.</p>${repeater("costs",costs(),"Add rank")}
+   <div class="actions dm-only"><button type="button" class="btn primary" data-act="save-costs">Save costs</button><button type="button" class="btn" data-act="reset-costs">Restore defaults</button></div></form>
+  <div class="prose"><p>The starting prices follow the Brand New Day guide (C 15, B 25, A- 55, AA 100, ??? 150) with the other ranks filled in on the same curve. Change them to fit your table; every tree updates right away.</p>
+  <p class="muted">Characters level up when their EXP reaches their EXP-per-level number, and gain the skill and stat points set on their sheet.</p></div></div></section>`;
+}
+function viewNews(){
+ const src=[["Wargamer: D&D 2026 releases","https://www.wargamer.com/dnd/gama-books"],["Gizmodo: 2026 roadmap","https://gizmodo.com/dungeons-and-dragons-2026-roadmap-seasons-dnd-ravenloft-2000728869"],["EN World: Gen Con keynote","https://www.enworld.org/threads/d-d%E2%80%99s-gen-con-vision-keynote-2027%E2%80%94all-of-the-announcements.720101/"],["ComicBook.com: 2027 recap","https://comicbook.com/gaming/feature/everything-revealed-for-dnd-2027-roadmap-gen-con-2026-recap/"],["D&D Beyond: 2024 Free Rules","https://www.dndbeyond.com/posts/1804-start-playing-today-with-the-2024-d-d-free-rules"],["Wargamer: SRD 5.2 changes","https://www.wargamer.com/dnd/srd-5-2-changes"]];
+ return `<section class="sheet-head"><span class="eyebrow">Official Dungeons &amp; Dragons · as of November 2026</span><h1>What's new in D&amp;D</h1><p class="lede">Gathered from the web on Nov 3, 2026. Dates come from news coverage, not from Wizards of the Coast directly.</p></section>
+ <section class="section"><div class="section-head"><h2>Coming up</h2></div><div class="tbl-wrap"><table><thead><tr><th>When</th><th>What</th><th>Notes</th></tr></thead><tbody>
+  <tr><td class="mono">Nov 17, 2026</td><td><b>Warcraft</b> (with Blizzard)</td><td class="muted">First release in the D&amp;D Universes Beyond line.</td></tr>
+  <tr><td class="mono">Feb–Jul 2027</td><td><b>Dark Sun</b>, Season of Survival</td><td class="muted">First new Dark Sun book since 2010.</td></tr>
+  <tr><td class="mono">Sep–Oct 2027</td><td><b>Greyhawk: Crown of the Witch Queen</b></td><td class="muted">160-page hardcover.</td></tr>
+  <tr><td class="mono">2027</td><td><b>Greyhawk Icons adventure</b></td><td class="muted">Luke Gygax finishes an adventure from Gary Gygax's notes.</td></tr>
+  <tr><td class="mono">2027</td><td><b>Season of Rebellion</b></td><td class="muted">Star Wars themed.</td></tr></tbody></table></div></section>
+ <section class="section"><div class="section-head"><h2>2026 so far</h2></div><div class="grid">
+  <div class="card"><h3>Seasons</h3><p class="muted">D&amp;D moved to seasons in 2026, each built around a main sourcebook.</p></div>
+  <div class="card"><h3>Ravenloft: The Horrors Within</h3><p class="muted">The return to Ravenloft.</p></div>
+  <div class="card"><h3>Arcana Unleashed</h3><p class="muted">High-magic rules book full of new spells. September 2026.</p></div>
+  <div class="card"><h3>Deadfall</h3><p class="muted">Red Wizards of Thay adventure. One report puts the deluxe box set at $500.</p></div></div></section>
+ <section class="section"><div class="section-head"><h2>Play for free</h2></div><div class="split">
+  <div class="card"><h3>2024 Free Rules</h3><p class="muted">On D&amp;D Beyond: Cleric, Fighter, Rogue and Wizard; Dwarf, Elf, Halfling and Human; four backgrounds.</p></div>
+  <div class="card"><h3>SRD 5.2</h3><p class="muted">A larger free reference covering the 2024 core books, under Creative Commons.</p></div>
+  <div class="card"><h3>What changed in 2024</h3><p class="muted">Ability boosts come from your background, not your species, and half-species are gone.</p></div></div></section>
+ <section class="section"><div class="section-head"><h2>Sources</h2></div><ul class="clean">${src.map(s=>`<li><a href="${s[1]}" target="_blank" rel="noopener">${esc(s[0])}</a></li>`).join("")}</ul></section>`;
+}
+
+/* ================= roles ================= */
+const CAP={canDm:true,sample:null,img:null};
+const isDM=()=>ui.role==="dm";
+ui.role=(LS.get("codex2:role")==="player")?"player":"dm";
+ui.ai={desc:"",camp:"",power:"Starting (level 1)",file:null,imgUrl:"",busy:false,err:"",result:null,ctl:null};
+ui.mapAi={desc:"",busy:false,err:"",ctl:null,confirm:false};
+ui.tool={t:"g",mode:"paint",brush:1,label:"",labelHidden:false,zoom:28};
+ui.mw=null; ui.matSel=null; ui.matFog="off"; ui.matZoom=40;
+let mapSaveTimer=null;
+function roleSwitch(){ const el=$("#roleSw"); if(!el) return;
+ el.innerHTML=CAP.canDm?`<button data-act="role" data-v="dm" class="${isDM()?"on":""}" aria-pressed="${isDM()}">DM</button><button data-act="role" data-v="player" class="${!isDM()?"on":""}" aria-pressed="${!isDM()}">Player</button>`:`<button class="on" disabled>Player</button>`; }
+async function initCaps(){
+ const C=window.claude;
+ if(C&&C.use){
+  try{ const u=await C.use("user"); CAP.canDm=u?await u.isOwner():false; }catch(e){ CAP.canDm=false; }
+  if(!CAP.canDm) ui.role="player";
+  try{ CAP.sample=await C.use("sample"); }catch(e){ CAP.sample=null; }
+  try{ CAP.dl=await C.use("downloads"); }catch(e){ CAP.dl=null; }
+  if(CAP.sample){ try{ const lim=await CAP.sample.limits(); CAP.img=lim&&lim.images||null; }catch(e){ CAP.img=null; } }
+ }
+ if(S.db&&CAP.canDm){ S.db.collection("dm").onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>m[d.id]=d.data()); S.data.dm=m; render(); },()=>{}); }
+ else if(!S.db){ S.data.dm=LS.get("codex2:dm")||{}; }
+ render();
+}
+function dmBox(key){ if(!isDM()) return "";
+ const d=S.data.dm&&S.data.dm[key];
+ return `<div class="fieldset dmbox"><h3>DM notes</h3><p class="edit-hint">${S.mode==="live"?"Locked to the DM: only you can read these. Players can't see them, even with edit access.":"Saved in this browser."}</p><textarea id="dmnote" data-key="${key}" placeholder="Secrets, twists, hidden stats, what they don't know yet…">${esc(d&&d.text||"")}</textarea></div>`; }
+
+/* ================= AI helpers ================= */
+const HIDE_CODES=["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
+function aiErr(e){ const c=e&&e.code;
+ return ({cancelled:"",rate_limited:"Claude is busy or you've hit your usage limit. Try again in a bit.",image_rejected:"That picture couldn't be used. Try a JPG or PNG that isn't huge.",
+  images_unavailable:"Pictures can't be sent from this view. Try again without one.",refused:"Claude declined that request. Try describing it differently.",invalid_json:"The draft came back garbled. Try again.",
+  session_expired:"Sign in to Claude again to use AI.",not_granted:"AI wasn't allowed for this page, so the AI buttons are hidden for now.",prompt_too_large:"That's too much text. Shorten the description."})[c]??"Something went wrong. Try again."; }
+function aiUnavailable(what){ return emptyBox(`${what} needs Claude`,"Open this page on claude.ai or in the Claude app and allow it to use Claude. Everything else on the page works without it.",null,""); }
+const str=(x,n)=>String(x==null?"":x).slice(0,n||600);
+const arr=(a,f,n)=>Array.isArray(a)?a.slice(0,n||12).map(f).filter(Boolean):[];
+function cleanChar(r){ r=r||{};
+ return {name:str(r.name,80),race:str(r.race,80),cls:str(r.cls,80),bio:str(r.bio,900),level:num(r.level)||1,hpMax:num(r.hpMax),enLabel:str(r.enLabel,20)||"MP",enMax:num(r.enMax),
+  tags:arr(r.tags,t=>str(t,30),10),stats:arr(r.stats,s=>s&&({k:str(s.k,40),v:str(s.v,40)}),14),
+  skills:arr(r.skills,s=>s&&({rank:str(s.rank,10),name:str(s.name,80),desc:str(s.desc,300)})),
+  moves:arr(r.moves,m=>m&&({name:str(m.name,80),desc:str(m.desc,300),cost:str(m.cost,40),dmg:str(m.dmg,40)})),
+  items:arr(r.items,i=>i&&({name:str(i.name,80),desc:str(i.desc,300)}),8),
+  sections:arr(r.sections,s=>s&&({h:str(s.h,80),body:str(s.body,1200)}),4)}; }
+function previewChar(c){
+ return `<div class="card" style="gap:12px"><span class="eyebrow">Draft</span><h2>${esc(c.name||"Unnamed")}</h2>
+ <div class="row">${c.race?`<span class="tag">${esc(c.race)}</span>`:""}${c.cls?`<span class="tag">${esc(c.cls)}</span>`:""}<span class="tag mono">Lv ${fmt(c.level)}</span>${c.hpMax?`<span class="tag mono">HP ${fmt(c.hpMax)}</span>`:""}${c.enMax?`<span class="tag mono">${esc(c.enLabel)} ${fmt(c.enMax)}</span>`:""}</div>
+ ${c.bio?`<p>${esc(c.bio)}</p>`:""}
+ ${c.stats.length?`<div class="stats">${c.stats.map(s=>`<div class="stat"><span class="k">${esc(s.k)}</span><span class="v">${esc(s.v)}</span></div>`).join("")}</div>`:""}
+ ${c.skills.length?`<div class="list">${c.skills.map(s=>`<div class="li">${chip(s.rank||"—")}<span class="nm">${esc(s.name)}</span>${s.desc?`<span class="ds">${esc(s.desc)}</span>`:""}</div>`).join("")}</div>`:""}
+ ${c.moves.length?`<div class="list">${c.moves.map(m=>`<div class="li nochip"><span class="nm">${esc(m.name)}</span>${m.desc?`<span class="ds">${esc(m.desc)}</span>`:""}${(m.cost||m.dmg)?`<span class="nums">${m.cost?"Cost "+esc(m.cost):""}${m.cost&&m.dmg?" · ":""}${m.dmg?"Dmg "+esc(m.dmg):""}</span>`:""}</div>`).join("")}</div>`:""}
+ ${c.items.length?`<p class="meta">Items: ${esc(c.items.map(i=>i.name).join(", "))}</p>`:""}
+ <div class="actions"><button class="btn primary" data-act="ai-save">Save as a new character</button><button class="btn" data-act="ai-gen">Try again</button><button class="btn" data-act="ai-clear">Discard</button></div></div>`; }
+
+/* ================= AI character creator ================= */
+function viewAiChar(){
+ const head=`<a href="#characters" class="muted">← All characters</a><section class="sheet-head"><span class="eyebrow">AI character creator</span><h1>Create a character with AI</h1><p class="lede">Describe who you want, add a picture if you have one, and Claude drafts a full sheet. Nothing saves until you say so, and you can edit everything after.</p></section>`;
+ if(!CAP.sample) return head+aiUnavailable("The AI character creator");
+ const A=ui.ai; const powers=["Starting (level 1)","Seasoned adventurer","Legendary hero","Godlike"];
+ return head+`<div class="split" style="align-items:start">${campOptions()}<form class="fieldset" onsubmit="return false">
+  <label class="fld"><span>Describe the character</span><textarea id="ai-desc" placeholder="A cursed knight who trades memories for power. Quiet, loyal, terrible at cooking.">${esc(A.desc)}</textarea></label>
+  <div class="form-grid" style="grid-template-columns:1fr 1fr">
+   <label class="fld"><span>Campaign</span><input type="text" id="ai-camp" list="camps" value="${esc(A.camp)}" placeholder="Matches stats to this campaign"></label>
+   <label class="fld"><span>Power level</span><select id="ai-power">${powers.map(p=>`<option ${A.power===p?"selected":""}>${esc(p)}</option>`).join("")}</select></label></div>
+  ${CAP.img?`<div class="fld"><span>Picture (optional): art, a sketch, a mini, a cosplay photo</span>
+   ${A.imgUrl?`<div class="row"><img class="ai-prev" src="${A.imgUrl}" alt="Picture the character will be based on"><button type="button" class="btn small" data-act="ai-noimg">Remove picture</button></div>`:`<input type="file" id="ai-img" accept="${esc(CAP.img.mediaTypes.join(","))}">`}</div>`:`<p class="edit-hint">Picture upload isn't available in this view.</p>`}
+  <p class="edit-hint">If the campaign already has characters, Claude copies their stat names, number scale and rank style.</p>
+  <div class="actions"><button type="button" class="btn primary" data-act="ai-gen" ${A.busy?"disabled":""}>${A.busy?"Writing the sheet…":A.imgUrl?"Create from picture":"Create character"}</button>${A.busy?`<button type="button" class="btn" data-act="ai-stop">Stop</button>`:""}</div>
+  ${A.err?`<div class="note">${esc(A.err)}</div>`:""}</form>
+  <div>${A.result?previewChar(A.result):A.busy?`<div class="empty"><h3>Thinking…</h3><p class="muted">A full sheet usually takes 10 to 60 seconds.</p></div>`:`<div class="empty"><h3>Your draft shows up here</h3><p class="muted">Try "a halfling bard who fights with a cursed lute" or upload a drawing.</p></div>`}</div></div>`;
+}
+async function aiGen(){
+ const A=ui.ai; if(A.busy) return;
+ const desc=A.desc.trim(); if(!desc&&!A.file){ toast("Describe the character or add a picture"); return; }
+ const world=worlds().find(w=>w.name&&w.name===A.camp);
+ const ex=chars().filter(c=>A.camp&&c.campaign===A.camp).slice(0,2).map(c=>({level:c.level,hpMax:c.hpMax,enLabel:c.enLabel,enMax:c.enMax,stats:c.stats,skills:(c.skills||[]).slice(0,4),moves:(c.moves||[]).slice(0,3)}));
+ const prompt=`Create a character sheet for a homebrew tabletop RPG (D&D style, but the table invents its own stats and ranks).
+Request: ${desc||"(no description; base it entirely on the attached picture)"}
+Power level: ${A.power}
+${world?`World: ${world.name}${world.tag?" ("+world.tag+")":""}. ${str(world.blurb,1200)}`:""}
+${ex.length?`Match the stat names, number scale and rank style of these sheets from the same campaign:\n${JSON.stringify(ex).slice(0,3000)}`:"Use these stats: Strength, Dexterity, Defense, Magic ATK, Magic DEF, Speed (numbers), IQ and BIQ (letter grades)."}
+Skill ranks must come from this list: ${costs().map(x=>x.rank).join(", ")}.
+${A.file?"A picture of the character is attached. Base their look, gear, mood and powers on it, and describe what they look like in the bio.":""}
+Return ONLY a JSON object with these keys: {"name":string,"race":string,"cls":string,"bio":string (2-3 sentences),"level":number,"hpMax":number,"enLabel":string (energy name like MP or Chakra),"enMax":number,"tags":[string] (magic types),"stats":[{"k":string,"v":string}],"skills":[{"rank":string,"name":string,"desc":string}] (3 to 6),"moves":[{"name":string,"desc":string,"cost":string,"dmg":string}] (3 to 6),"items":[{"name":string,"desc":string}] (1 to 4),"sections":[{"h":string,"body":string}] (0 to 2, e.g. personality or backstory)}`;
+ A.busy=true; A.err=""; A.result=null; A.ctl=new AbortController(); render(true);
+ try{ const o={signal:A.ctl.signal,modelTier:"default"}; if(A.file&&CAP.img) o.images=[A.file];
+  A.result=cleanChar(await CAP.sample.json(prompt,o)); }
+ catch(e){ A.err=aiErr(e); if(HIDE_CODES.includes(e&&e.code)) CAP.sample=null; if(e&&e.code==="images_unavailable") CAP.img=null; }
+ A.busy=false; render(true);
+}
+
+/* ================= map engine ================= */
+const R=4, INK="#2b2119";
+const TER={
+ ".":{n:"Parchment",c:"#e6d6b2"}, g:{n:"Grass",c:"#6c9848"}, e:{n:"Meadow",c:"#a1bb5f"}, f:{n:"Forest floor",c:"#3d6a33"}, u:{n:"Dirt",c:"#8d7150"}, r:{n:"Road",c:"#b5946a"},
+ s:{n:"Sand",c:"#dcc58f"}, w:{n:"Water",c:"#4f8ec3"}, d:{n:"Deep sea",c:"#295a91"}, q:{n:"Swamp",c:"#5a6a3b"}, n:{n:"Snow",c:"#eef3f6"}, i:{n:"Ice",c:"#bfe0ee"},
+ k:{n:"Rock",c:"#867c71"}, l:{n:"Lava",c:"#d4542a"}, c:{n:"Cave floor",c:"#4f4439"}, o:{n:"Stone floor",c:"#aaa59c"}, p:{n:"Wood floor",c:"#9b6b40"}, "#":{n:"Wall",c:"#34333b"}
+};
+const TORDER=["d","w","i","s","q","u","e","g","f","r","n","k","l","c","o","p","#"];
+const WATERY=new Set(["w","d"]), CRISP=new Set(["o","p","#"]);
+function rng(seed){ let s=seed>>>0||1; return ()=>{ s^=s<<13; s^=s>>>17; s^=s<<5; return ((s>>>0)%10000)/10000; }; }
+function hexMix(h,amt){ const n=parseInt(h.slice(1),16); let r=n>>16,g=(n>>8)&255,b=n&255; const t=amt<0?0:255,p=Math.abs(amt); r=Math.round(r+(t-r)*p); g=Math.round(g+(t-g)*p); b=Math.round(b+(t-b)*p); return `rgb(${r},${g},${b})`; }
+/* ---- textures ---- */
+const TEX={};
+function makeTex(t){ const S=96, cv=document.createElement("canvas"); cv.width=cv.height=S; const x=cv.getContext("2d"); const base=TER[t].c; const rnd=rng(t.charCodeAt(0)*977+13);
+ x.fillStyle=base; x.fillRect(0,0,S,S);
+ for(let i=0;i<70;i++){ const r=6+rnd()*18, cx=rnd()*S, cy=rnd()*S; x.fillStyle=hexMix(base,(rnd()-.5)*.22); x.globalAlpha=.35; x.beginPath(); for(const ox of [-S,0,S]) for(const oy of [-S,0,S]){ x.moveTo(cx+ox+r,cy+oy); x.arc(cx+ox,cy+oy,r,0,7); } x.fill(); }
+ x.globalAlpha=1;
+ const dots=(n,col,sz,a)=>{ x.fillStyle=col; x.globalAlpha=a; for(let i=0;i<n;i++){ x.fillRect(rnd()*S,rnd()*S,sz,sz); } x.globalAlpha=1; };
+ const strokes=(n,col,len,w,ang,a)=>{ x.strokeStyle=col; x.lineWidth=w; x.globalAlpha=a; for(let i=0;i<n;i++){ const px=rnd()*S,py=rnd()*S,an=ang+(rnd()-.5)*.8; x.beginPath(); for(const ox of [-S,0,S]) for(const oy of [-S,0,S]){ x.moveTo(px+ox,py+oy); x.lineTo(px+ox+Math.cos(an)*len,py+oy+Math.sin(an)*len); } x.stroke(); } x.globalAlpha=1; };
+ if(t==="g"||t==="e"){ strokes(160,hexMix(base,-.3),3.5,1,-Math.PI/2,.5); strokes(80,hexMix(base,.25),3,1,-Math.PI/2,.45); }
+ if(t==="f"){ strokes(120,hexMix(base,-.35),3,1,-Math.PI/2,.5); dots(60,hexMix(base,.15),2,.5); }
+ if(t==="u"||t==="r"){ dots(140,hexMix(base,-.3),2,.55); dots(60,hexMix(base,.3),2,.5); }
+ if(t==="s"){ dots(260,hexMix(base,-.18),1.3,.6); dots(80,hexMix(base,.25),1.3,.6); }
+ if(t==="w"||t==="d"){ x.strokeStyle=hexMix(base,.35); x.lineWidth=1.2; x.globalAlpha=.45; for(let i=0;i<22;i++){ const px=rnd()*S,py=rnd()*S,l=8+rnd()*14; x.beginPath(); x.moveTo(px,py); x.quadraticCurveTo(px+l/2,py-3,px+l,py); x.stroke(); } x.globalAlpha=1; }
+ if(t==="q"){ for(let i=0;i<10;i++){ x.fillStyle="rgba(40,60,50,.45)"; x.beginPath(); x.ellipse(rnd()*S,rnd()*S,6+rnd()*8,3+rnd()*4,0,0,7); x.fill(); } strokes(70,"#2f3a1f",4,1,-Math.PI/2,.6); }
+ if(t==="n"||t==="i"){ for(let i=0;i<14;i++){ x.fillStyle="rgba(150,180,210,.18)"; x.beginPath(); x.ellipse(rnd()*S,rnd()*S,10+rnd()*12,4+rnd()*6,.3,0,7); x.fill(); } if(t==="i") strokes(25,"#ffffff",14,1,.6,.6); }
+ if(t==="k"){ strokes(50,hexMix(base,-.35),8,1.2,.9,.5); strokes(30,hexMix(base,.3),6,1,.9,.5); }
+ if(t==="l"){ x.strokeStyle="#4a1a0c"; x.lineWidth=2.4; x.globalAlpha=.75; for(let i=0;i<10;i++){ let px=rnd()*S,py=rnd()*S; x.beginPath(); x.moveTo(px,py); for(let k=0;k<4;k++){ px+=(rnd()-.5)*22; py+=(rnd()-.5)*22; x.lineTo(px,py); } x.stroke(); } x.globalAlpha=1; dots(40,"#ffcf5a",2.5,.8); }
+ if(t==="c"){ dots(160,hexMix(base,-.3),2,.6); dots(40,hexMix(base,.3),2,.5); }
+ if(t==="o"){ x.strokeStyle=hexMix(base,-.35); x.lineWidth=1.4; for(let j=0;j<4;j++){ x.beginPath(); x.moveTo(0,j*24+.5); x.lineTo(S,j*24+.5); x.stroke(); for(let i=0;i<4;i++){ const ox=(i*24+(j%2)*12)%S; x.beginPath(); x.moveTo(ox+.5,j*24); x.lineTo(ox+.5,j*24+24); x.stroke(); } } dots(80,hexMix(base,-.2),1.5,.5); }
+ if(t==="p"){ x.strokeStyle=hexMix(base,-.4); x.lineWidth=1.2; for(let j=0;j<6;j++){ x.beginPath(); x.moveTo(0,j*16+.5); x.lineTo(S,j*16+.5); x.stroke(); const ox=rnd()*S; x.beginPath(); x.moveTo(ox,j*16); x.lineTo(ox,j*16+16); x.stroke(); } strokes(50,hexMix(base,-.25),12,.8,0,.4); }
+ if(t==="#"){ x.strokeStyle="#1d1c22"; x.lineWidth=1.5; for(let j=0;j<8;j++){ x.beginPath(); x.moveTo(0,j*12+.5); x.lineTo(S,j*12+.5); x.stroke(); for(let i=0;i<4;i++){ const ox=(i*24+(j%2)*12)%S; x.beginPath(); x.moveTo(ox+.5,j*12); x.lineTo(ox+.5,j*12+12); x.stroke(); } } dots(60,"#55545e",2,.5); }
+ if(t==="."){ dots(300,"#b89a68",1.2,.35); for(let i=0;i<8;i++){ x.fillStyle="rgba(150,110,60,.08)"; x.beginPath(); x.arc(rnd()*S,rnd()*S,10+rnd()*20,0,7); x.fill(); } }
+ TEX[t]={cv,url:null}; return TEX[t]; }
+const tex=t=>TEX[t]||makeTex(t);
+function texUrl(t){ const T=tex(t); if(!T.url) T.url=T.cv.toDataURL(); return T.url; }
+function pat(x,t,Z){ const p=x.createPattern(tex(t).cv,"repeat"); try{ p.setTransform(new DOMMatrix().scale(Z/40)); }catch(e){} return p; }
+
+/* ---- stamps ---- */
+function shadow(x,S,w,h,dy){ x.fillStyle="rgba(20,15,10,.28)"; x.beginPath(); x.ellipse(S*.04,S*(dy||.32),S*(w||.36),S*(h||.1),0,0,7); x.fill(); }
+function circles(x,S,list,fill,lw){ x.lineWidth=lw; x.strokeStyle=INK; list.forEach(([cx,cy,r])=>{ x.beginPath(); x.arc(cx*S,cy*S,r*S,0,7); x.stroke(); }); x.fillStyle=fill; list.forEach(([cx,cy,r])=>{ x.beginPath(); x.arc(cx*S,cy*S,r*S,0,7); x.fill(); }); }
+function poly(x,S,pts,fill,lw){ x.beginPath(); pts.forEach(([a,b],i)=>i?x.lineTo(a*S,b*S):x.moveTo(a*S,b*S)); x.closePath(); if(fill){ x.fillStyle=fill; x.fill(); } if(lw){ x.lineWidth=lw; x.strokeStyle=INK; x.lineJoin="round"; x.stroke(); } }
+function rect(x,S,a,b,w,h,fill,lw){ x.fillStyle=fill; x.fillRect(a*S,b*S,w*S,h*S); if(lw){ x.lineWidth=lw; x.strokeStyle=INK; x.strokeRect(a*S,b*S,w*S,h*S); } }
+function roofed(x,S,ox,oy,w,h,wall,roof,lw){ rect(x,S,ox-w/2,oy-h*.55,w,h*.55,wall,lw); poly(x,S,[[ox-w/2-.03,oy-h*.55],[ox,oy-h],[ox+w/2+.03,oy-h*.55]],roof,lw); rect(x,S,ox-.035,oy-h*.22,.07,h*.22,"#4a3220",lw*.7); }
+const STAMPS={
+ tree:{n:"Oak",cat:"Nature",s:1,d(x,S,L){ shadow(x,S,.32,.09,.36); rect(x,S,-.05,.05,.1,.3,"#6a4626",L); circles(x,S,[[-.17,-.02,.2],[.17,-.02,.2],[0,-.22,.24],[0,.02,.22]],"#47803a",L*1.6); x.fillStyle="rgba(255,255,220,.22)"; x.beginPath(); x.arc(-.07*S,-.25*S,.11*S,0,7); x.fill(); x.fillStyle="rgba(0,0,0,.12)"; x.beginPath(); x.arc(.12*S,.04*S,.13*S,0,7); x.fill(); }},
+ pine:{n:"Pine",cat:"Nature",s:1,d(x,S,L){ shadow(x,S,.24,.07,.4); rect(x,S,-.04,.22,.08,.18,"#5b3c21",L); [[.28,.3],[.22,.08],[.15,-.14]].forEach(([w,y])=>poly(x,S,[[-w,y+.02],[0,y-.3],[w,y+.02]],"#2f6a3e",L)); x.strokeStyle="rgba(255,255,220,.25)"; x.lineWidth=L; x.beginPath(); x.moveTo(-.05*S,-.38*S); x.lineTo(-.15*S,.25*S); x.stroke(); }},
+ palm:{n:"Palm",cat:"Nature",s:1,d(x,S,L){ shadow(x,S,.22,.07,.4); x.strokeStyle="#7a5530"; x.lineWidth=S*.07; x.beginPath(); x.moveTo(0,.38*S); x.quadraticCurveTo(.12*S,0,-.02*S,-.22*S); x.stroke(); x.fillStyle="#4f8a3c"; x.strokeStyle=INK; x.lineWidth=L; [0,1.1,2.2,3.3,4.4,5.5].forEach(a=>{ x.beginPath(); x.ellipse(-.02*S+Math.cos(a)*.15*S,-.22*S+Math.sin(a)*.08*S,.17*S,.05*S,a,0,7); x.fill(); x.stroke(); }); }},
+ bush:{n:"Bush",cat:"Nature",s:.6,d(x,S,L){ shadow(x,S,.3,.08,.18); circles(x,S,[[-.18,0,.16],[.15,0,.17],[0,-.1,.2]],"#55893f",L*1.6); }},
+ dead:{n:"Dead tree",cat:"Nature",s:1,d(x,S,L){ shadow(x,S,.2,.06,.4); x.strokeStyle="#4a3524"; x.lineCap="round"; x.lineWidth=S*.07; x.beginPath(); x.moveTo(0,.38*S); x.lineTo(0,-.1*S); x.stroke(); x.lineWidth=S*.035; [[0,0,-.22,-.3],[0,-.05,.2,-.32],[0,.1,.18,-.05],[-.1,-.15,-.25,-.18]].forEach(([a,b,c,d])=>{ x.beginPath(); x.moveTo(a*S,b*S); x.lineTo(c*S,d*S); x.stroke(); }); }},
+ mountain:{n:"Mountain",cat:"Terrain",s:2.2,d(x,S,L){ shadow(x,S,.48,.08,.3); poly(x,S,[[-.5,.3],[-.06,-.42],[.5,.3]],"#93897c",L); poly(x,S,[[-.06,-.42],[.5,.3],[.08,.3],[.02,-.05]],"#6f665c"); poly(x,S,[[-.5,.3],[-.06,-.42],[.5,.3]],null,L); x.strokeStyle=INK; x.lineWidth=L*.7; x.beginPath(); x.moveTo(-.06*S,-.42*S); x.lineTo(.02*S,-.05*S); x.lineTo(-.06*S,.12*S); x.stroke(); [[-.3,.2],[-.22,.05],[.25,.2]].forEach(([a,b])=>{ x.beginPath(); x.moveTo(a*S,b*S); x.lineTo((a+.08)*S,(b-.06)*S); x.stroke(); }); }},
+ snowpeak:{n:"Snowy peak",cat:"Terrain",s:2.2,d(x,S,L){ STAMPS.mountain.d(x,S,L); poly(x,S,[[-.06,-.42],[-.22,-.16],[-.12,-.2],[-.05,-.13],[.04,-.2],[.13,-.17]],"#f4f7fa",L*.8); }},
+ hill:{n:"Hill",cat:"Terrain",s:1.6,d(x,S,L){ x.fillStyle="rgba(20,15,10,.22)"; x.beginPath(); x.ellipse(.04*S,.12*S,.46*S,.12*S,0,0,7); x.fill(); x.fillStyle="#7f9a52"; x.beginPath(); x.moveTo(-.45*S,.12*S); x.quadraticCurveTo(0,-.42*S,.45*S,.12*S); x.closePath(); x.fill(); x.strokeStyle=INK; x.lineWidth=L; x.beginPath(); x.moveTo(-.45*S,.12*S); x.quadraticCurveTo(0,-.42*S,.45*S,.12*S); x.stroke(); x.lineWidth=L*.7; [[.12,-.05],[.22,.02],[.3,.08]].forEach(([a,b])=>{ x.beginPath(); x.moveTo(a*S,b*S); x.lineTo((a+.05)*S,(b+.07)*S); x.stroke(); }); }},
+ rock:{n:"Boulder",cat:"Terrain",s:.7,d(x,S,L){ shadow(x,S,.3,.08,.2); poly(x,S,[[-.3,.15],[-.25,-.12],[-.02,-.25],[.25,-.15],[.3,.15]],"#8c8379",L); poly(x,S,[[.02,-.25],[.25,-.15],[.3,.15],[.05,.15]],"rgba(0,0,0,.18)"); }},
+ house:{n:"House",cat:"Buildings",s:1,d(x,S,L){ shadow(x,S,.32,.08,.33); roofed(x,S,0,.3,.56,.7,"#e2cfa5","#9a3f2c",L); rect(x,S,.1,-.1,.1,.08,"#3b2a1d"); }},
+ village:{n:"Village",cat:"Buildings",s:2,d(x,S,L){ shadow(x,S,.48,.1,.36); roofed(x,S,-.24,.08,.3,.4,"#e2cfa5","#8f3b28",L); roofed(x,S,.2,.02,.32,.42,"#d8c49a","#5a6a7a",L); roofed(x,S,-.02,.34,.34,.44,"#e6d3aa","#9a3f2c",L); }},
+ tower:{n:"Tower",cat:"Buildings",s:1.3,d(x,S,L){ shadow(x,S,.22,.07,.4); rect(x,S,-.14,-.15,.28,.55,"#b9b1a3",L); poly(x,S,[[-.19,-.15],[0,-.48],[.19,-.15]],"#3f5a8a",L); rect(x,S,-.04,0,.08,.1,"#2c2420"); rect(x,S,-.05,.28,.1,.12,"#4a3220",L*.7); }},
+ castle:{n:"Castle",cat:"Buildings",s:2.6,d(x,S,L){ shadow(x,S,.48,.1,.36); rect(x,S,-.36,-.05,.72,.4,"#c4bcae",L); for(let i=0;i<7;i++) rect(x,S,-.36+i*.11,-.1,.06,.06,"#c4bcae",L*.7); rect(x,S,-.14,-.3,.28,.3,"#b5ad9f",L); [[-.4],[.32]].forEach(([a])=>{ rect(x,S,a,-.22,.1,.57,"#b0a899",L); poly(x,S,[[a-.03,-.22],[a+.05,-.42],[a+.13,-.22]],"#3f5a8a",L); }); poly(x,S,[[-.17,-.3],[0,-.5],[.17,-.3]],"#8f3b28",L); x.strokeStyle=INK; x.lineWidth=L; x.beginPath(); x.moveTo(0,-.5*S); x.lineTo(0,-.62*S); x.stroke(); poly(x,S,[[0,-.62],[.12,-.58],[0,-.54]],"#c0392b"); x.fillStyle="#3a2a1e"; x.beginPath(); x.arc(0,.25*S,.07*S,Math.PI,0); x.fill(); rect(x,S,-.07,.25,.14,.1,"#3a2a1e"); }},
+ ruins:{n:"Ruins",cat:"Buildings",s:1.6,d(x,S,L){ shadow(x,S,.42,.08,.3); poly(x,S,[[-.38,.25],[-.38,-.1],[-.3,-.18],[-.24,-.05],[-.2,.25]],"#a59d90",L); poly(x,S,[[-.05,.25],[-.05,-.28],[.05,-.2],[.08,.25]],"#a59d90",L); poly(x,S,[[.2,.25],[.2,-.02],[.3,.05],[.36,-.08],[.38,.25]],"#a59d90",L); [[-.12,.28],[.14,.3],[.0,.33]].forEach(([a,b])=>poly(x,S,[[a,b],[a+.06,b-.04],[a+.1,b]],"#8d857a",L*.7)); }},
+ temple:{n:"Temple",cat:"Buildings",s:1.8,d(x,S,L){ shadow(x,S,.42,.08,.36); rect(x,S,-.4,.22,.8,.1,"#d7d0c2",L); for(let i=0;i<5;i++) rect(x,S,-.33+i*.15,-.12,.07,.34,"#e6e0d3",L*.8); rect(x,S,-.4,-.18,.8,.07,"#d7d0c2",L); poly(x,S,[[-.42,-.18],[0,-.42],[.42,-.18]],"#cfc6b6",L); }},
+ tent:{n:"Tent",cat:"Buildings",s:.9,d(x,S,L){ shadow(x,S,.3,.07,.3); poly(x,S,[[-.32,.28],[0,-.32],[.32,.28]],"#c9a45c",L); poly(x,S,[[-.07,.28],[0,.02],[.07,.28]],"#3a2a1e",L*.7); }},
+ bridge:{n:"Bridge",cat:"Buildings",s:2,d(x,S,L){ rect(x,S,-.45,-.1,.9,.2,"#9b6b40",L); x.strokeStyle=INK; x.lineWidth=L*.6; for(let i=1;i<9;i++){ x.beginPath(); x.moveTo((-.45+i*.1)*S,-.1*S); x.lineTo((-.45+i*.1)*S,.1*S); x.stroke(); } rect(x,S,-.47,-.14,.94,.04,"#6a4626",L*.7); rect(x,S,-.47,.1,.94,.04,"#6a4626",L*.7); }},
+ ship:{n:"Ship",cat:"Sea",s:1.6,d(x,S,L){ x.fillStyle="rgba(255,255,255,.35)"; x.beginPath(); x.ellipse(0,.22*S,.42*S,.07*S,0,0,7); x.fill(); x.fillStyle="#7a5232"; x.beginPath(); x.moveTo(-.38*S,.05*S); x.lineTo(.4*S,.05*S); x.quadraticCurveTo(.3*S,.25*S,.15*S,.25*S); x.lineTo(-.25*S,.25*S); x.closePath(); x.fill(); x.lineWidth=L; x.strokeStyle=INK; x.stroke(); x.beginPath(); x.moveTo(0,.05*S); x.lineTo(0,-.45*S); x.stroke(); poly(x,S,[[.02,-.42],[.3,-.1],[.02,-.02]],"#f1ead8",L); poly(x,S,[[-.02,-.38],[-.26,-.06],[-.02,-.04]],"#e8dfc8",L); }},
+ boat:{n:"Rowboat",cat:"Sea",s:.8,d(x,S,L){ x.fillStyle="#7a5232"; x.beginPath(); x.ellipse(0,0,.35*S,.12*S,0,0,7); x.fill(); x.lineWidth=L; x.strokeStyle=INK; x.stroke(); x.fillStyle="#5a3c22"; x.beginPath(); x.ellipse(0,0,.26*S,.07*S,0,0,7); x.fill(); }},
+ whirl:{n:"Whirlpool",cat:"Sea",s:1.4,d(x,S,L){ x.strokeStyle="rgba(230,245,255,.85)"; x.lineWidth=L*1.2; x.beginPath(); for(let a=0;a<14;a+=.2){ const r=.03+a*.028; x.lineTo(Math.cos(a)*r*S,Math.sin(a)*r*S*.7); } x.stroke(); }},
+ cave:{n:"Cave",cat:"Dungeon",s:1.4,d(x,S,L){ shadow(x,S,.42,.08,.28); poly(x,S,[[-.42,.25],[-.3,-.12],[-.05,-.3],[.22,-.22],[.42,.25]],"#8a8076",L); x.fillStyle="#17120e"; x.beginPath(); x.moveTo(-.16*S,.25*S); x.quadraticCurveTo(0,-.18*S,.16*S,.25*S); x.closePath(); x.fill(); }},
+ door:{n:"Door",cat:"Dungeon",s:.9,d(x,S,L){ rect(x,S,-.22,-.09,.44,.18,"#7a5232",L); x.strokeStyle=INK; x.lineWidth=L*.6; x.beginPath(); x.moveTo(0,-.09*S); x.lineTo(0,.09*S); x.stroke(); }},
+ chest:{n:"Chest",cat:"Dungeon",s:.6,d(x,S,L){ shadow(x,S,.28,.06,.22); rect(x,S,-.25,-.12,.5,.32,"#8a5a2b",L); rect(x,S,-.25,-.12,.5,.1,"#a06a34",L); rect(x,S,-.04,-.04,.08,.1,"#e2b443",L*.6); }},
+ fire:{n:"Campfire",cat:"Dungeon",s:.7,d(x,S,L){ x.strokeStyle="#5a3c22"; x.lineWidth=S*.08; x.lineCap="round"; x.beginPath(); x.moveTo(-.25*S,.2*S); x.lineTo(.25*S,0); x.moveTo(.25*S,.2*S); x.lineTo(-.25*S,0); x.stroke(); poly(x,S,[[-.15,.1],[-.1,-.15],[-.02,-.05],[0,-.3],[.08,-.08],[.12,-.18],[.16,.1]],"#f08a24",L*.7); poly(x,S,[[-.06,.08],[0,-.1],[.06,.08]],"#ffd34d"); }},
+ skull:{n:"Bones",cat:"Dungeon",s:.6,d(x,S,L){ circles(x,S,[[0,-.05,.2]],"#efe7d6",L); rect(x,S,-.1,.1,.2,.1,"#efe7d6",L*.8); x.fillStyle=INK; x.beginPath(); x.arc(-.08*S,-.05*S,.05*S,0,7); x.arc(.08*S,-.05*S,.05*S,0,7); x.fill(); }},
+ well:{n:"Well",cat:"Buildings",s:.8,d(x,S,L){ shadow(x,S,.26,.07,.24); circles(x,S,[[0,.05,.2]],"#a59d90",L); x.fillStyle="#1d2a3a"; x.beginPath(); x.arc(0,.05*S,.12*S,0,7); x.fill(); poly(x,S,[[-.26,-.15],[0,-.38],[.26,-.15]],"#8f3b28",L); }},
+ sign:{n:"Signpost",cat:"Buildings",s:.7,d(x,S,L){ rect(x,S,-.03,-.2,.06,.5,"#6a4626",L*.8); poly(x,S,[[-.25,-.25],[.2,-.25],[.28,-.17],[.2,-.09],[-.25,-.09]],"#b48a58",L); }},
+ compass:{n:"Compass rose",cat:"Map art",s:3,d(x,S,L){ x.strokeStyle=INK; x.lineWidth=L; x.beginPath(); x.arc(0,0,.3*S,0,7); x.stroke(); x.beginPath(); x.arc(0,0,.26*S,0,7); x.stroke();
+   for(let i=0;i<8;i++){ const a=i*Math.PI/4-Math.PI/2, len=i%2?.28:.46, w=i%2?.05:.08; const tip=[Math.cos(a)*len,Math.sin(a)*len], l=[Math.cos(a-Math.PI/2)*w,Math.sin(a-Math.PI/2)*w], r=[Math.cos(a+Math.PI/2)*w,Math.sin(a+Math.PI/2)*w];
+    poly(x,S,[[0,0],l,tip],i%2?"#e8dcc0":"#8f3b28",L*.8); poly(x,S,[[0,0],tip,r],i%2?"#c9b994":"#f1e7d0",L*.8); }
+   x.fillStyle=INK; x.font=`700 ${S*.14}px "IM Fell English SC", Georgia, serif`; x.textAlign="center"; x.textBaseline="middle"; x.fillText("N",0,-.55*S); }},
+ kraken:{n:"Sea serpent",cat:"Map art",s:2,d(x,S,L){ x.lineWidth=S*.07; x.lineCap="round"; x.strokeStyle=INK; x.beginPath(); x.moveTo(-.4*S,.1*S); x.bezierCurveTo(-.25*S,-.25*S,-.1*S,.3*S,.05*S,0); x.bezierCurveTo(.15*S,-.2*S,.25*S,.1*S,.35*S,-.15*S); x.stroke(); x.strokeStyle="#3f7a6a"; x.lineWidth=S*.05; x.stroke(); x.fillStyle="#3f7a6a"; x.beginPath(); x.ellipse(.38*S,-.18*S,.07*S,.05*S,-.5,0,7); x.fill(); }}
+};
+const STCATS=["Nature","Terrain","Buildings","Sea","Dungeon","Map art"];
+const STURL={};
+function stampUrl(k){ if(STURL[k]) return STURL[k]; const cv=document.createElement("canvas"); cv.width=cv.height=64; const x=cv.getContext("2d"); x.translate(32,34); const S=40; STAMPS[k].d(x,S,Math.max(1,S*.035)); return STURL[k]=cv.toDataURL(); }
+
+/* ---- model ---- */
+const newMap=(w,h)=>{ w=w||30; h=h||20; return {name:"",campaign:"",w,h,res:R,base:"g",paint:"g".repeat(w*R*h*R),objects:[],labels:[],fogOn:false,fog:"0".repeat(w*h),style:"painted",grid:false,frame:true,createdAt:Date.now()}; };
+const maps=()=>Object.entries(S.data.maps||{}).map(([id,m])=>Object.assign({id},m));
+const mats=()=>Object.entries(S.data.mats||{}).map(([id,m])=>Object.assign({id},m));
+function normMap(src){ const m=clone(src); m.w=Math.max(4,num(m.w)||24); m.h=Math.max(4,num(m.h)||16); const PW=m.w*R, N=PW*m.h*R;
+ if(!m.res){ const old=String(m.tiles||""), map={h:"e",m:"k",b:"p"}; const objs=[]; const paint=new Array(N);
+  for(let j=0;j<m.h*R;j++) for(let i=0;i<PW;i++){ let t=old[Math.floor(j/R)*m.w+Math.floor(i/R)]||"g"; t=map[t]||t; paint[j*PW+i]=TER[t]?t:"g"; }
+  const rr=rng(7); for(let j=0;j<m.h;j++) for(let i=0;i<m.w;i++){ const t=old[j*m.w+i]; if(t==="m"&&rr()<.5) objs.push({k:"mountain",x:i+.5,y:j+.7,s:.6}); if(t==="h"&&rr()<.5) objs.push({k:"hill",x:i+.5,y:j+.7,s:.6}); if(t==="f") objs.push({k:rr()<.5?"pine":"tree",x:i+.3+rr()*.4,y:j+.5+rr()*.3,s:.8}); }
+  m.paint=paint; m.objects=objs; m.labels=(m.labels||[]).map(l=>({x:num(l.x)+.5,y:num(l.y)+.5,text:l.text,hidden:!!l.hidden,size:"m",style:"light"})); m.res=R; m.base="g"; m.style="painted"; m.frame=false; delete m.tiles; }
+ else m.paint=String(m.paint||"").split("");
+ if(m.paint.length!==N){ const b=m.base||"g"; m.paint=m.paint.slice(0,N); while(m.paint.length<N) m.paint.push(b); }
+ m.fog=String(m.fog||"").padEnd(m.w*m.h,"0").slice(0,m.w*m.h).split("");
+ m.objects=Array.isArray(m.objects)?m.objects:[]; m.labels=Array.isArray(m.labels)?m.labels:[]; m.style=m.style||"painted"; return m; }
+function workMap(id){ if(!ui.mw||ui.mw.id!==id||!ui.mw.dirty){ const m=S.data.maps[id]; if(!m) return null; ui.mw={id,m:normMap(m),dirty:false,undo:ui.mw&&ui.mw.id===id?ui.mw.undo:[],redo:ui.mw&&ui.mw.id===id?ui.mw.redo:[]}; } return ui.mw.m; }
+function saveMapNow(){ if(!ui.mw) return; clearTimeout(mapSaveTimer); const m=clone(ui.mw.m); m.paint=ui.mw.m.paint.join(""); m.fog=ui.mw.m.fog.join(""); m.objects=m.objects.slice(0,2500); const id=ui.mw.id; ui.mw.dirty=false; put("maps",id,m,true); }
+function queueMapSave(){ if(!ui.mw) return; ui.mw.dirty=true; clearTimeout(mapSaveTimer); mapSaveTimer=setTimeout(saveMapNow,800); }
+function snap(){ const m=ui.mw.m; return JSON.stringify({p:m.paint.join(""),o:m.objects,l:m.labels,f:m.fog.join("")}); }
+function pushUndo(){ if(!ui.mw) return; ui.mw.undo.push(snap()); if(ui.mw.undo.length>40) ui.mw.undo.shift(); ui.mw.redo=[]; }
+function restore(sn){ const o=JSON.parse(sn), m=ui.mw.m; m.paint=o.p.split(""); m.objects=o.o; m.labels=o.l; m.fog=o.f.split(""); ui.mk.sel=null; queueMapSave(); render("keep"); }
+function undo(){ if(!ui.mw||!ui.mw.undo.length) return; ui.mw.redo.push(snap()); restore(ui.mw.undo.pop()); }
+function redo(){ if(!ui.mw||!ui.mw.redo.length) return; ui.mw.undo.push(snap()); restore(ui.mw.redo.pop()); }
+
+/* ---- rendering ---- */
+const _tmp={}; function tmpCv(k,w,h){ let c=_tmp[k]; if(!c){ c=_tmp[k]=document.createElement("canvas"); } if(c.width!==w||c.height!==h){ c.width=w; c.height=h; } return c; }
+function maskOf(m,test){ const PW=m.w*R, PH=m.h*R; const cv=tmpCv("mask",PW,PH), x=cv.getContext("2d"); const img=x.createImageData(PW,PH), d=img.data; let any=false;
+ for(let k=0;k<m.paint.length;k++) if(test(m.paint[k])){ d[k*4+3]=255; any=true; } x.putImageData(img,0,0); return any?cv:null; }
+function renderMap(cv,m,o){
+ const Z=o.Z, W=m.w, H=m.h, fw=W*Z, fh=H*Z; if(cv.width!==fw) cv.width=fw; if(cv.height!==fh) cv.height=fh; const x=cv.getContext("2d"); x.setTransform(1,0,0,1,0,0);
+ const base=m.base||"g"; x.fillStyle=pat(x,base,Z); x.fillRect(0,0,fw,fh);
+ const present={}; m.paint.forEach(t=>present[t]=1);
+ const hasWater=WATERY.has(base)||present.w||present.d; let coastDone=!hasWater;
+ const tmp=tmpCv("layer",fw,fh), tx=tmp.getContext("2d");
+ const layer=(mask,fill,crisp,blur,twice)=>{ tx.globalCompositeOperation="source-over"; tx.clearRect(0,0,fw,fh); tx.imageSmoothingEnabled=!crisp; tx.imageSmoothingQuality="high"; tx.filter=blur?`blur(${blur}px)`:"none"; tx.drawImage(mask,0,0,fw,fh); if(twice) tx.drawImage(mask,0,0,fw,fh); tx.filter="none"; tx.globalCompositeOperation="source-in"; tx.fillStyle=fill; tx.fillRect(0,0,fw,fh); tx.globalCompositeOperation="source-over"; x.drawImage(tmp,0,0); };
+ const coast=()=>{ const land=maskOf(m,t=>!WATERY.has(t)&&t!=="."); if(land){ layer(land,"rgba(225,240,245,.55)",false,Z*.35); layer(land,"rgba(50,38,26,.55)",false,Z*.06); } coastDone=true; };
+ for(const t of [".",...TORDER]){ if(t===base||!present[t]) continue; if(!coastDone&&!WATERY.has(t)) coast(); const mk=maskOf(m,v=>v===t); if(mk) layer(mk,pat(tx,t,Z),CRISP.has(t),CRISP.has(t)?0:Math.max(1,Z/R*.75),!CRISP.has(t)); }
+ if(!coastDone) coast();
+ if(o.grid||m.grid){ x.strokeStyle="rgba(20,15,10,.22)"; x.lineWidth=1; x.beginPath(); for(let i=0;i<=W;i++){ x.moveTo(i*Z+.5,0); x.lineTo(i*Z+.5,fh); } for(let j=0;j<=H;j++){ x.moveTo(0,j*Z+.5); x.lineTo(fw,j*Z+.5); } x.stroke(); }
+ const objs=m.objects.map((ob,i)=>[ob,i]).sort((a,b)=>a[0].y-b[0].y);
+ objs.forEach(([ob,i])=>{ const st=STAMPS[ob.k]; if(!st) return; if(ob.hidden&&!o.dm) return; const SS=Z*(ob.s||1); x.save(); x.translate(ob.x*Z,ob.y*Z); if(ob.r) x.rotate(ob.r*Math.PI/180); if(ob.f) x.scale(-1,1); if(ob.hidden) x.globalAlpha=.55; st.d(x,SS,Math.max(1,SS*.035)); x.restore();
+  if(o.sel&&o.sel.t==="o"&&o.sel.i===i){ x.save(); x.strokeStyle="#e2ae4f"; x.lineWidth=2; x.setLineDash([5,4]); x.strokeRect(ob.x*Z-SS*.55,ob.y*Z-SS*.55,SS*1.1,SS*1.1); x.restore(); } });
+ if(m.style==="parchment"){ x.save(); x.globalCompositeOperation="multiply"; x.fillStyle="rgba(214,180,120,.55)"; x.fillRect(0,0,fw,fh); x.fillStyle=pat(x,".",Z*1.5); x.globalAlpha=.6; x.fillRect(0,0,fw,fh); x.restore(); x.save(); x.globalCompositeOperation="saturation"; x.fillStyle="rgba(128,128,128,.35)"; x.fillRect(0,0,fw,fh); x.restore(); }
+ const vg=x.createRadialGradient(fw/2,fh/2,Math.min(fw,fh)*.35,fw/2,fh/2,Math.max(fw,fh)*.75); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,m.style==="parchment"?"rgba(90,55,20,.45)":"rgba(10,15,20,.35)"); x.fillStyle=vg; x.fillRect(0,0,fw,fh);
+ const LS2={s:.45,m:.7,l:1.1,xl:1.7}, LST={ink:["#2b2119","rgba(255,247,226,.9)"],light:["#ffffff","rgba(0,0,0,.75)"],red:["#8c1d14","rgba(255,247,226,.9)"],blue:["#1f3f6e","rgba(255,247,226,.9)"]};
+ x.textAlign="center"; x.textBaseline="middle"; x.lineJoin="round";
+ m.labels.forEach((l,i)=>{ if(l.hidden&&!o.dm) return; const fs=Math.max(9,Z*(LS2[l.size]||.7)); x.font=`${fs}px "IM Fell English SC", Georgia, serif`; try{ x.letterSpacing=(fs*.06)+"px"; }catch(e){} const [fc,hc]=LST[l.style]||LST.ink;
+  x.globalAlpha=l.hidden?.6:1; x.lineWidth=Math.max(3,fs*.22); x.strokeStyle=hc; x.strokeText(l.text,l.x*Z,l.y*Z); x.fillStyle=fc; x.fillText(l.text,l.x*Z,l.y*Z); x.globalAlpha=1;
+  if(o.sel&&o.sel.t==="l"&&o.sel.i===i){ const w=x.measureText(l.text).width; x.save(); x.strokeStyle="#e2ae4f"; x.lineWidth=2; x.setLineDash([5,4]); x.strokeRect(l.x*Z-w/2-6,l.y*Z-fs*.65,w+12,fs*1.3); x.restore(); } });
+ try{ x.letterSpacing="0px"; }catch(e){}
+ if(m.frame){ const b=Math.max(6,Z*.35); x.strokeStyle="#2b2119"; x.lineWidth=b*.5; x.strokeRect(b*.25,b*.25,fw-b*.5,fh-b*.5); x.lineWidth=1.5; x.strokeRect(b*.9,b*.9,fw-b*1.8,fh-b*1.8); x.fillStyle="#2b2119"; [[b*.9,b*.9],[fw-b*.9,b*.9],[b*.9,fh-b*.9],[fw-b*.9,fh-b*.9]].forEach(([a,c])=>{ x.beginPath(); x.arc(a,c,b*.35,0,7); x.fill(); }); }
+ if(m.fogOn&&o.fog){ for(let k=0;k<W*H;k++) if(m.fog[k]!=="1"){ x.fillStyle=o.dm?"rgba(8,9,18,.5)":"#0b0c14"; x.fillRect((k%W)*Z,Math.floor(k/W)*Z,Z,Z); } }
+}
+let rafPending=false; function redrawCanvases(){ if(rafPending) return; rafPending=true; requestAnimationFrame(()=>{ rafPending=false;
+ const tb=$("#treebg"); if(tb) drawSky(tb); const sk=$(".sky"); if(sk&&ui.skyC!==sk.id){ ui.skyC=sk.id; sk.scrollLeft=(sk.scrollWidth-sk.clientWidth)/2; sk.scrollTop=(sk.scrollHeight-sk.clientHeight)/2; }
+ const cv=$("#mapcv"); if(cv){ const m=workMap(cv.dataset.id); const st=cv.closest(".canvas-frame"); if(m&&st&&ui.fitFor!==cv.dataset.id){ ui.fitFor=cv.dataset.id; const avail=st.clientWidth-(cv.closest(".mk-stage")?40:4); ui.tool.zoom=Math.max(10,Math.min(40,Math.floor(avail/m.w))); const z=$(".mk-z"); if(z) z.textContent=Math.round(ui.tool.zoom/28*100)+"%"; } if(m) renderMap(cv,m,{Z:ui.tool.zoom,dm:isDM(),fog:true,sel:isDM()?ui.mk.sel:null}); }
+ const mc=$("#matcv"); if(mc){ const mat=S.data.mats[mc.dataset.mat]; const m=mat&&mat.mapId&&S.data.maps[mat.mapId]?workMap(mat.mapId):blankGrid(); renderMap(mc,m,{Z:ui.matZoom,dm:isDM(),fog:true,grid:true}); } }); }
+function blankGrid(){ const w=20,h=14; return {w,h,res:R,base:".",paint:new Array(w*R*h*R).fill("."),objects:[],labels:[],fogOn:false,fog:[],style:"painted"}; }
+if(document.fonts&&document.fonts.load) document.fonts.load('20px "IM Fell English SC"').then(()=>redrawCanvases()).catch(()=>{});
+
+/* ---- editor state & views ---- */
+ui.mk={tool:"paint",t:"g",size:4,stamp:"pine",scale:1,rot:false,density:3,text:"",tsize:"m",tstyle:"ink",thidden:false,fogMode:"reveal",cat:"Nature",sel:null,fillConfirm:false};
+const ICON={select:'<path d="M5 3l14 8-6 2-2 6z"/>',paint:'<path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/>',stamp:'<path d="M12 3l5 8h-3l4 6H6l4-6H7z"/><path d="M12 17v4"/>',scatter:'<circle cx="6" cy="7" r="2"/><circle cx="16" cy="5" r="2"/><circle cx="11" cy="13" r="2"/><circle cx="18" cy="15" r="2"/><circle cx="7" cy="19" r="2"/>',
+ text:'<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',erase:'<path d="M4 16l9-9 7 7-6 6H8z"/><path d="M14 20h6"/>',fog:'<path d="M6 16h11a4 4 0 0 0 0-8 6 6 0 0 0-11 2 3 3 0 0 0 0 6z"/>',pan:'<path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.5-1.5L8 13"/>'};
+const svgI=k=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+const TOOLS=[["select","Select & move"],["paint","Terrain brush"],["stamp","Stamp"],["scatter","Scatter"],["text","Text"],["erase","Eraser"],["fog","Fog of war"],["pan","Pan"]];
+function viewMaps(){ const M=maps().sort(byUpdated);
+ return `<section class="section"><div class="section-head"><h2>Maps</h2>${isDM()?`<button class="btn primary" data-act="new-map">New map</button>`:""}</div>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:M.length?`<div class="grid">${M.map(m=>`<a class="card" href="#map-${m.id}"><span class="eyebrow">${esc(m.campaign||"Map")}</span><h3>${esc(m.name||"Untitled map")}</h3><p class="meta">${m.w} × ${m.h} squares${m.fogOn?" · fog of war":""}${m.style==="parchment"?" · parchment":""}</p></a>`).join("")}</div>`
+ :emptyBox("No maps yet",isDM()?"Paint textured terrain, drop trees, mountains and castles, letter your place names, or describe a place and let AI draw it.":"The DM hasn't made any maps yet.",isDM()?"new-map":null,"Make the first map")}</section>`; }
+function mkPanel(m){ const K=ui.mk, sel=K.sel;
+ const rangeF=(id,label,min,max,step,val)=>`<label class="mk-f"><span>${label} <b id="${id}-v">${val}</b></span><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"></label>`;
+ if(K.tool==="paint") return `<h4>Terrain</h4><div class="mk-grid">${Object.keys(TER).map(t=>`<button class="mk-tile ${K.t===t?"on":""}" data-act="mk-terr" data-v="${esc(t)}" style="background-image:url(${texUrl(t)})" title="${esc(TER[t].n)}"><span>${esc(TER[t].n)}</span></button>`).join("")}</div>
+  ${rangeF("mk-size","Brush size",1,16,1,K.size)}<p class="mk-hint">Edges blend softly into the terrain around them, like a painted map.</p>
+  <button class="btnk ${K.fillConfirm?"warn":""}" data-act="mk-fill">${K.fillConfirm?"Tap again to fill the whole map":"Fill whole map with "+esc(TER[K.t].n)}</button>`;
+ if(K.tool==="stamp"||K.tool==="scatter") return `<h4>${K.tool==="stamp"?"Stamps":"Scatter"}</h4>
+  <div class="mk-cats">${STCATS.map(c=>`<button class="${K.cat===c?"on":""}" data-act="mk-cat" data-v="${c}">${c}</button>`).join("")}</div>
+  <div class="mk-grid">${Object.entries(STAMPS).filter(([,s])=>s.cat===K.cat).map(([k,s])=>`<button class="mk-tile stamp ${K.stamp===k?"on":""}" data-act="mk-stamp" data-v="${k}" title="${esc(s.n)}"><img src="${stampUrl(k)}" alt=""><span>${esc(s.n)}</span></button>`).join("")}</div>
+  ${rangeF("mk-scale","Size",.3,4,.1,K.scale)}
+  ${K.tool==="scatter"?rangeF("mk-size","Brush size",2,16,1,K.size)+rangeF("mk-dens","Density",1,8,1,K.density)+`<p class="mk-hint">Drag to scatter. Trees mix oak, pine and bush for a natural forest.</p>`:`<label class="mk-chk"><input type="checkbox" id="mk-rot" ${K.rot?"checked":""}> Random rotation and flip</label><p class="mk-hint">Click to place. Switch to Select to move, resize or hide a stamp.</p>`}`;
+ if(K.tool==="text") return `<h4>Text</h4><label class="mk-f"><span>Label</span><input type="text" id="mk-text" value="${esc(K.text)}" placeholder="The Shattered Coast"></label>
+  <label class="mk-f"><span>Size</span><select id="mk-tsize">${[["s","Small"],["m","Medium"],["l","Large"],["xl","Title"]].map(([k,n])=>`<option value="${k}" ${K.tsize===k?"selected":""}>${n}</option>`).join("")}</select></label>
+  <label class="mk-f"><span>Ink</span><select id="mk-tstyle">${[["ink","Dark ink"],["light","White"],["red","Red ink"],["blue","Blue ink"]].map(([k,n])=>`<option value="${k}" ${K.tstyle===k?"selected":""}>${n}</option>`).join("")}</select></label>
+  <label class="mk-chk"><input type="checkbox" id="mk-thid" ${K.thidden?"checked":""}> DM only</label><p class="mk-hint">Type the label, then click the map where it goes.</p>`;
+ if(K.tool==="erase") return `<h4>Eraser</h4>${rangeF("mk-size","Brush size",1,16,1,K.size)}<p class="mk-hint">Drag over stamps and labels to remove them. To repaint ground, use the terrain brush.</p>`;
+ if(K.tool==="fog") return `<h4>Fog of war</h4><label class="mk-chk"><input type="checkbox" id="mk-fogon" ${m.fogOn?"checked":""}> Fog is on for players</label>
+  <div class="mk-row"><button class="btnk ${K.fogMode==="reveal"?"on":""}" data-act="mk-fogmode" data-v="reveal">Reveal</button><button class="btnk ${K.fogMode==="hide"?"on":""}" data-act="mk-fogmode" data-v="hide">Hide</button></div>
+  ${rangeF("mk-size","Brush size",1,16,1,K.size)}<div class="mk-row"><button class="btnk" data-act="mk-fogall" data-v="1">Reveal all</button><button class="btnk" data-act="mk-fogall" data-v="0">Hide all</button></div><p class="mk-hint">Players see black where it's hidden. You see it shaded.</p>`;
+ if(K.tool==="pan") return `<h4>Pan</h4><p class="mk-hint">Drag the map to move around. On a phone, use two fingers with any tool.</p>`;
+ if(sel&&sel.t==="o"&&m.objects[sel.i]){ const ob=m.objects[sel.i];
+  return `<h4>${esc(STAMPS[ob.k]?STAMPS[ob.k].n:"Stamp")}</h4>${rangeF("mk-oscale","Size",.2,6,.1,+(ob.s||1).toFixed(1))}
+  <div class="mk-row"><button class="btnk" data-act="mk-orot" data-v="-15">⟲ 15°</button><button class="btnk" data-act="mk-orot" data-v="15">⟳ 15°</button><button class="btnk" data-act="mk-oflip">Flip</button></div>
+  <label class="mk-chk"><input type="checkbox" id="mk-ohid" ${ob.hidden?"checked":""}> Hidden from players</label>
+  <div class="mk-row"><button class="btnk" data-act="mk-odup">Duplicate</button><button class="btnk warn" data-act="mk-odel">Delete</button></div><p class="mk-hint">Drag it on the map to move. Delete key removes it.</p>`; }
+ if(sel&&sel.t==="l"&&m.labels[sel.i]){ const l=m.labels[sel.i];
+  return `<h4>Label</h4><label class="mk-f"><span>Text</span><input type="text" id="mk-ltext" value="${esc(l.text)}"></label>
+  <label class="mk-f"><span>Size</span><select id="mk-lsize">${[["s","Small"],["m","Medium"],["l","Large"],["xl","Title"]].map(([k,n])=>`<option value="${k}" ${l.size===k?"selected":""}>${n}</option>`).join("")}</select></label>
+  <label class="mk-f"><span>Ink</span><select id="mk-lstyle">${[["ink","Dark ink"],["light","White"],["red","Red ink"],["blue","Blue ink"]].map(([k,n])=>`<option value="${k}" ${l.style===k?"selected":""}>${n}</option>`).join("")}</select></label>
+  <label class="mk-chk"><input type="checkbox" id="mk-lhid" ${l.hidden?"checked":""}> DM only</label><div class="mk-row"><button class="btnk warn" data-act="mk-ldel">Delete label</button></div>`; }
+ return `<h4>Select</h4><p class="mk-hint">Click a stamp or label to select it, then drag to move it. Its settings show up here.</p>`;
+}
+function viewMap(id){
+ const m=workMap(id); if(!m) return notFound("map","maps");
+ const dm=isDM(), mat=mats().find(x=>x.mapId===id), K=ui.mk;
+ const head=`<a href="#maps" class="muted">← All maps</a>`;
+ if(!dm) return head+`<section class="sheet-head"><span class="eyebrow">${esc(m.campaign||"Map")}</span><div class="row" style="justify-content:space-between"><h1>${esc(m.name||"Untitled map")}</h1>${mat?`<a class="btn" href="#mat-${mat.id}">Open play mat</a>`:""}</div></section>
+  <div class="map-frame canvas-frame" id="mf-${id}"><canvas id="mapcv" data-id="${id}"></canvas></div><p class="muted">${m.fogOn?"Black squares are places your party hasn't explored yet.":""}</p>`;
+ return head+`<div class="mk">
+  <div class="mk-top"><input type="text" id="mk-name" class="mk-name" value="${esc(m.name)}" placeholder="Untitled map" aria-label="Map name">
+   <button class="btnk" data-act="mk-undo" ${ui.mw.undo.length?"":"disabled"} title="Undo (Ctrl+Z)">Undo</button><button class="btnk" data-act="mk-redo" ${ui.mw.redo.length?"":"disabled"} title="Redo">Redo</button>
+   <span class="mk-sep"></span><button class="btnk" data-act="mzoom" data-v="-6" aria-label="Zoom out">−</button><span class="mk-z">${Math.round(ui.tool.zoom/28*100)}%</span><button class="btnk" data-act="mzoom" data-v="6" aria-label="Zoom in">+</button>
+   <span class="mk-sep"></span><select id="mk-style" aria-label="Map style"><option value="painted" ${m.style!=="parchment"?"selected":""}>Painted</option><option value="parchment" ${m.style==="parchment"?"selected":""}>Parchment</option></select>
+   <label class="mk-chk"><input type="checkbox" id="mk-grid" ${m.grid?"checked":""}> Grid</label><label class="mk-chk"><input type="checkbox" id="mk-frame" ${m.frame?"checked":""}> Border</label>
+   <span style="flex:1"></span>${CAP.dl?`<button class="btnk" data-act="mk-export">Export PNG</button>`:""}${mat?`<a class="btnk acc" href="#mat-${mat.id}">Open play mat</a>`:`<button class="btnk acc" data-act="map-mat" data-id="${id}">Play on this map</button>`}</div>
+  <div class="mk-rail" role="toolbar" aria-label="Map tools">${TOOLS.map(([k,n])=>`<button class="${K.tool===k?"on":""}" data-act="mk-tool" data-v="${k}" title="${n}" aria-label="${n}" aria-pressed="${K.tool===k}">${svgI(k)}</button>`).join("")}</div>
+  <div class="mk-stage canvas-frame" id="mf-${id}"><canvas id="mapcv" data-id="${id}" class="tool-${K.tool}"></canvas></div>
+  <div class="mk-panel">${mkPanel(m)}</div></div>
+ <div class="split">
+  <form class="fieldset" onsubmit="return false">${campOptions()}<h3>Map details</h3><div class="form-grid" style="grid-template-columns:1fr 1fr">
+   <label class="fld wide"><span>Campaign</span><input type="text" id="m-camp" list="camps" value="${esc(m.campaign)}"></label>
+   ${fld("m-w","Width (squares)",m.w,"number")}${fld("m-h","Height (squares)",m.h,"number")}</div>
+   <div class="actions"><button type="button" class="btn primary" data-act="map-meta" data-id="${id}">Save details</button><span style="flex:1"></span><button type="button" class="btn danger" data-act="del" data-col="maps" data-id="${id}">Delete map</button></div></form>
+  <form class="fieldset" onsubmit="return false"><h3>Draw it with AI</h3>
+   ${CAP.sample?`<label class="fld"><span>Describe the place</span><textarea id="mai-desc" placeholder="A ring of islands around a volcano, a port town on the biggest one, pirate wrecks to the south.">${esc(ui.mapAi.desc)}</textarea></label>
+   <p class="edit-hint">Replaces the terrain, stamps and labels on this ${m.w} × ${m.h} map. Undo brings it back.</p>
+   <div class="actions"><button type="button" class="btn ${ui.mapAi.confirm?"danger primary":"primary"}" data-act="map-ai" data-id="${id}" ${ui.mapAi.busy?"disabled":""}>${ui.mapAi.busy?"Drawing…":ui.mapAi.confirm?"Tap again to replace the map":"Generate map"}</button>${ui.mapAi.busy?`<button type="button" class="btn" data-act="map-ai-stop">Stop</button>`:""}</div>
+   ${ui.mapAi.err?`<div class="note">${esc(ui.mapAi.err)}</div>`:""}`:`<p class="muted">Open this page on claude.ai or in the Claude app to generate maps with AI.</p>`}</form></div>${dmBox("map-"+id)}`;
+}
+
+/* ---- editing ops ---- */
+function subAt(cv,e,m){ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)/r.width*m.w,(e.clientY-r.top)/r.height*m.h]; }
+function paintAt(m,sx,sy,t,rad){ const PW=m.w*R, PH=m.h*R, cx=sx*R, cy=sy*R; const r=rad*.75;
+ for(let j=Math.floor(cy-r-1);j<=cy+r+1;j++) for(let i=Math.floor(cx-r-1);i<=cx+r+1;i++){ if(i<0||j<0||i>=PW||j>=PH) continue; const d=Math.hypot(i+.5-cx,j+.5-cy); if(d<=r-.4||(d<=r+.9&&Math.random()<.4)) m.paint[j*PW+i]=t; } }
+function fogAt(m,sx,sy,v,rad){ const r=Math.max(.5,rad/4); for(let j=Math.floor(sy-r);j<=sy+r;j++) for(let i=Math.floor(sx-r);i<=sx+r;i++){ if(i<0||j<0||i>=m.w||j>=m.h) continue; if(Math.hypot(i+.5-sx,j+.5-sy)<=r+.2) m.fog[j*m.w+i]=v; } }
+function hitObj(m,sx,sy){ for(let i=m.objects.length-1;i>=0;i--){ const o=m.objects[i]; const rr=(o.s||1)*.45; if(Math.abs(o.x-sx)<=rr&&Math.abs(o.y-sy)<=rr) return i; } return -1; }
+function hitLabel(m,sx,sy){ for(let i=m.labels.length-1;i>=0;i--){ const l=m.labels[i]; const h=({s:.45,m:.7,l:1.1,xl:1.7})[l.size]||.7; const w=String(l.text).length*h*.42; if(Math.abs(l.x-sx)<=w/2+.2&&Math.abs(l.y-sy)<=h*.6) return i; } return -1; }
+const FOREST=["pine","tree","pine","bush","tree"];
+let mkDrag=null, lastScatter=null;
+function mkDown(cv,e){ const m=ui.mw&&ui.mw.m; if(!m) return; const K=ui.mk; const [sx,sy]=subAt(cv,e,m);
+ if(K.tool==="pan"){ const f=cv.closest(".canvas-frame"); mkDrag={pan:true,f,x:e.clientX,y:e.clientY,sl:f.scrollLeft,st:f.scrollTop}; return true; }
+ if(K.tool==="select"){ let i=hitObj(m,sx,sy); if(i>=0){ K.sel={t:"o",i}; } else { i=hitLabel(m,sx,sy); K.sel=i>=0?{t:"l",i}:null; }
+  if(K.sel){ pushUndo(); const it=K.sel.t==="o"?m.objects[K.sel.i]:m.labels[K.sel.i]; mkDrag={move:true,it,ox:it.x-sx,oy:it.y-sy,moved:false}; }
+  $(".mk-panel").innerHTML=mkPanel(m); redrawCanvases(); return true; }
+ pushUndo();
+ if(K.tool==="paint"){ paintAt(m,sx,sy,K.t,K.size); mkDrag={paint:true}; }
+ else if(K.tool==="erase"){ mkErase(m,sx,sy); mkDrag={erase:true}; }
+ else if(K.tool==="fog"){ fogAt(m,sx,sy,K.fogMode==="reveal"?"1":"0",K.size); mkDrag={fog:true}; }
+ else if(K.tool==="stamp"){ const st=STAMPS[K.stamp]; const ob={k:K.stamp,x:+sx.toFixed(2),y:+sy.toFixed(2),s:+(st.s*K.scale).toFixed(2)}; if(K.rot){ ob.r=Math.round((Math.random()-.5)*30); ob.f=Math.random()<.5; } m.objects.push(ob); }
+ else if(K.tool==="scatter"){ lastScatter=null; scatterAt(m,sx,sy); mkDrag={scatter:true}; }
+ else if(K.tool==="text"){ const t=(K.text||"").trim(); if(!t){ toast("Type the label text in the panel first"); ui.mw.undo.pop(); return true; } m.labels.push({x:+sx.toFixed(2),y:+sy.toFixed(2),text:t.slice(0,60),size:K.tsize,style:K.tstyle,hidden:K.thidden}); }
+ queueMapSave(); redrawCanvases(); return true; }
+function mkMove(cv,e){ const m=ui.mw&&ui.mw.m; if(!m||!mkDrag) return; const K=ui.mk;
+ if(mkDrag.pan){ mkDrag.f.scrollLeft=mkDrag.sl-(e.clientX-mkDrag.x); mkDrag.f.scrollTop=mkDrag.st-(e.clientY-mkDrag.y); return; }
+ const [sx,sy]=subAt(cv,e,m);
+ if(mkDrag.move){ mkDrag.it.x=+Math.max(0,Math.min(m.w,sx+mkDrag.ox)).toFixed(2); mkDrag.it.y=+Math.max(0,Math.min(m.h,sy+mkDrag.oy)).toFixed(2); mkDrag.moved=true; }
+ else if(mkDrag.paint) paintAt(m,sx,sy,K.t,K.size);
+ else if(mkDrag.erase) mkErase(m,sx,sy);
+ else if(mkDrag.fog) fogAt(m,sx,sy,K.fogMode==="reveal"?"1":"0",K.size);
+ else if(mkDrag.scatter) scatterAt(m,sx,sy);
+ else return;
+ queueMapSave(); redrawCanvases(); }
+function mkUp(){ if(!mkDrag) return; const d=mkDrag; mkDrag=null; if(d.move&&!d.moved&&ui.mw.undo.length) ui.mw.undo.pop(); if(!d.pan){ const b=$('[data-act="mk-undo"]'); if(b) b.disabled=!ui.mw.undo.length; } }
+function mkErase(m,sx,sy){ const r=Math.max(.4,ui.mk.size/4); m.objects=m.objects.filter(o=>Math.hypot(o.x-sx,o.y-sy)>r); m.labels=m.labels.filter(l=>Math.hypot(l.x-sx,l.y-sy)>r); ui.mk.sel=null; }
+function scatterAt(m,sx,sy){ const K=ui.mk; if(lastScatter&&Math.hypot(sx-lastScatter[0],sy-lastScatter[1])<.9/K.density) return; lastScatter=[sx,sy];
+ const r=Math.max(.5,K.size/4), n=Math.max(1,Math.round(K.density/2)); const forest=STAMPS[K.stamp].cat==="Nature"&&["pine","tree","bush"].includes(K.stamp);
+ for(let i=0;i<n;i++){ const a=Math.random()*7, d=Math.sqrt(Math.random())*r; const k=forest&&Math.random()<.5?FOREST[Math.floor(Math.random()*FOREST.length)]:K.stamp; const st=STAMPS[k];
+  const x=sx+Math.cos(a)*d, y=sy+Math.sin(a)*d; if(x<0||y<0||x>m.w||y>m.h) continue; m.objects.push({k,x:+x.toFixed(2),y:+y.toFixed(2),s:+(st.s*K.scale*(.8+Math.random()*.4)).toFixed(2),f:Math.random()<.5}); }
+ if(m.objects.length>2500) m.objects.splice(0,m.objects.length-2500); }
+function roughen(m,passes){ const PW=m.w*R, PH=m.h*R; for(let p=0;p<passes;p++){ const src=m.paint.slice(); for(let j=0;j<PH;j++) for(let i=0;i<PW;i++){ const k=j*PW+i; const nb=[[1,0],[-1,0],[0,1],[0,-1]].map(([a,b])=>{ const x=i+a,y=j+b; return x>=0&&y>=0&&x<PW&&y<PH?src[y*PW+x]:null; }).filter(v=>v&&v!==src[k]); if(nb.length&&Math.random()<.32) m.paint[k]=nb[Math.floor(Math.random()*nb.length)]; } } }
+async function mapAi(id){
+ const M=ui.mapAi; const m=workMap(id); const desc=M.desc.trim(); if(!desc){ toast("Describe the place first"); return; }
+ const legend=Object.entries(TER).map(([k,v])=>`"${k}"=${v.n}`).join(", "), st=Object.entries(STAMPS).map(([k,v])=>`${k} (${v.n})`).join(", ");
+ const prompt=`Design a fantasy map in the style of a hand-painted RPG map.
+Place: ${desc}
+The map is a grid of exactly ${m.w} columns and ${m.h} rows. One letter per square for the ground.
+Ground letters: ${legend}. Use only these letters.
+Make it look natural: coastlines and rivers with curves, beaches between land and sea, roads that connect places, forests as clumps, mountain ranges as chains of rock. For indoor or dungeon maps use walls "#" around rooms of stone floor "o".
+Then place stamps on top. Stamp types: ${st}. Forest-floor ("f") squares and rock ("k") squares get trees and mountains added automatically, so only list stamps for important features (towns, castles, towers, ruins, ships, caves, bridges, a compass rose).
+Return ONLY JSON: {"name":string,"rows":[string] (exactly ${m.h} strings of exactly ${m.w} letters),"stamps":[{"k":stamp type,"x":number (0-${m.w}),"y":number (0-${m.h})}] (3 to 20),"labels":[{"x":number,"y":number,"text":string,"size":"s"|"m"|"l"|"xl"}] (3 to 10, one "xl" for the map's title or largest region)}`;
+ M.busy=true; M.err=""; M.confirm=false; M.ctl=new AbortController(); render(true);
+ try{ const r=await CAP.sample.json(prompt,{signal:M.ctl.signal,modelTier:"default"});
+  const rows=Array.isArray(r&&r.rows)?r.rows:[]; if(!rows.length) throw {code:"invalid_json"};
+  pushUndo(); const w=workMap(id), PW=w.w*R; const cnt={};
+  for(let j=0;j<w.h;j++){ const row=String(rows[j]||""); for(let i=0;i<w.w;i++){ let ch=row[i]; if(!TER[ch]) ch=TER[String(ch||"").toLowerCase()]?String(ch).toLowerCase():"g"; cnt[ch]=(cnt[ch]||0)+1; for(let b=0;b<R;b++) for(let a=0;a<R;a++) w.paint[(j*R+b)*PW+i*R+a]=ch; } }
+  w.base=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0]; roughen(w,2);
+  const objs=[]; const rr=rng(Date.now()%9999);
+  for(let j=0;j<w.h;j++) for(let i=0;i<w.w;i++){ const ch=String(rows[j]||"")[i]; if(ch==="f"){ for(let n=0;n<2;n++) objs.push({k:FOREST[Math.floor(rr()*FOREST.length)],x:+(i+.15+rr()*.7).toFixed(2),y:+(j+.2+rr()*.7).toFixed(2),s:+(.85+rr()*.3).toFixed(2),f:rr()<.5}); }
+   if(ch==="k"&&rr()<.3) objs.push({k:rr()<.25?"snowpeak":"mountain",x:+(i+.3+rr()*.4).toFixed(2),y:+(j+.7).toFixed(2),s:+(1.4+rr()*.7).toFixed(2)}); }
+  arr(r.stamps,o=>o&&STAMPS[o.k]?{k:o.k,x:+Math.max(0,Math.min(w.w,num(o.x))).toFixed(2),y:+Math.max(0,Math.min(w.h,num(o.y))).toFixed(2),s:STAMPS[o.k].s}:null,30).forEach(o=>objs.push(o));
+  w.objects=objs; w.labels=arr(r.labels,l=>l&&l.text?{x:+Math.max(0,Math.min(w.w,num(l.x))).toFixed(2),y:+Math.max(0,Math.min(w.h,num(l.y))).toFixed(2),text:str(l.text,40),size:["s","m","l","xl"].includes(l.size)?l.size:"m",style:"ink",hidden:false}:null,12);
+  if(!w.name&&r.name) w.name=str(r.name,60); saveMapNow(); toast("Map drawn"); }
+ catch(e){ M.err=aiErr(e); if(HIDE_CODES.includes(e&&e.code)) CAP.sample=null; }
+ M.busy=false; render(true);
+}
+async function exportPng(){ const m=ui.mw&&ui.mw.m; if(!m||!CAP.dl) return; const Z=Math.max(24,Math.min(64,Math.floor(4000/Math.max(m.w,m.h)))); const cv=document.createElement("canvas"); renderMap(cv,m,{Z,dm:false,fog:false});
+ cv.toBlob(async b=>{ if(!b){ toast("Couldn't make the image"); return; } try{ await CAP.dl.save({filename:(m.name||"map").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"-")+".png",data:b}); }catch(e){ if(e&&e.code!=="declined") toast("Couldn't save the file here"); } },"image/png"); }
+
+/* ---- editor events ---- */
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act; if(!/^mk-|^mzoom$|^map-meta$|^map-ai$|^map-ai-stop$/.test(act)) return;
+ const m=ui.mw&&ui.mw.m, K=ui.mk;
+ const panel=()=>{ const p=$(".mk-panel"); if(p&&m) p.innerHTML=mkPanel(m); redrawCanvases(); };
+ if(act==="mk-tool"){ K.tool=b.dataset.v; if(K.tool!=="select") K.sel=null; K.fillConfirm=false; if(K.tool==="scatter"&&!["Nature","Terrain"].includes(K.cat)){ K.cat="Nature"; K.stamp="pine"; } render("keep"); return; }
+ if(act==="mk-terr"){ K.t=b.dataset.v; K.fillConfirm=false; panel(); return; }
+ if(act==="mk-cat"){ K.cat=b.dataset.v; const first=Object.entries(STAMPS).find(([,s])=>s.cat===K.cat); if(first) K.stamp=first[0]; panel(); return; }
+ if(act==="mk-stamp"){ K.stamp=b.dataset.v; panel(); return; }
+ if(act==="mk-fill"){ if(!K.fillConfirm){ K.fillConfirm=true; panel(); return; } pushUndo(); m.paint=m.paint.map(()=>K.t); m.base=K.t; K.fillConfirm=false; queueMapSave(); panel(); return; }
+ if(act==="mk-fogmode"){ K.fogMode=b.dataset.v; panel(); return; }
+ if(act==="mk-fogall"){ pushUndo(); m.fog=m.fog.map(()=>b.dataset.v); queueMapSave(); redrawCanvases(); toast(b.dataset.v==="1"?"Whole map revealed":"Whole map hidden"); return; }
+ if(act==="mk-undo"){ undo(); return; } if(act==="mk-redo"){ redo(); return; }
+ if(act==="mk-export"){ exportPng(); return; }
+ const ob=K.sel&&K.sel.t==="o"&&m&&m.objects[K.sel.i], lb=K.sel&&K.sel.t==="l"&&m&&m.labels[K.sel.i];
+ if(act==="mk-orot"&&ob){ pushUndo(); ob.r=((ob.r||0)+num(b.dataset.v))%360; queueMapSave(); redrawCanvases(); return; }
+ if(act==="mk-oflip"&&ob){ pushUndo(); ob.f=!ob.f; queueMapSave(); redrawCanvases(); return; }
+ if(act==="mk-odup"&&ob){ pushUndo(); m.objects.push(Object.assign({},ob,{x:+(ob.x+.6).toFixed(2),y:+(ob.y+.3).toFixed(2)})); K.sel={t:"o",i:m.objects.length-1}; queueMapSave(); panel(); return; }
+ if(act==="mk-odel"&&ob){ pushUndo(); m.objects.splice(K.sel.i,1); K.sel=null; queueMapSave(); panel(); return; }
+ if(act==="mk-ldel"&&lb){ pushUndo(); m.labels.splice(K.sel.i,1); K.sel=null; queueMapSave(); panel(); return; }
+ if(act==="mzoom"){ ui.tool.zoom=Math.max(10,Math.min(70,ui.tool.zoom+num(b.dataset.v))); const z=$(".mk-z"); if(z) z.textContent=Math.round(ui.tool.zoom/28*100)+"%"; redrawCanvases(); return; }
+ if(act==="map-meta"){ const id=b.dataset.id; if(!m) return; m.campaign=v("m-camp"); m.name=v("mk-name")||m.name;
+  const nw=Math.max(4,Math.min(64,Math.round(num(v("m-w"))||m.w))), nh=Math.max(4,Math.min(64,Math.round(num(v("m-h"))||m.h)));
+  if(nw!==m.w||nh!==m.h){ pushUndo(); const PW=m.w*R, NW=nw*R, p=[], f=[]; for(let j=0;j<nh*R;j++) for(let i=0;i<NW;i++){ p.push(i<PW&&j<m.h*R?m.paint[j*PW+i]:(m.base||"g")); } for(let j=0;j<nh;j++) for(let i=0;i<nw;i++) f.push(i<m.w&&j<m.h?m.fog[j*m.w+i]:"0");
+   m.paint=p; m.fog=f; m.w=nw; m.h=nh; m.objects=m.objects.filter(o=>o.x<=nw&&o.y<=nh); m.labels=m.labels.filter(l=>l.x<=nw&&l.y<=nh); }
+  saveMapNow(); render("keep"); toast("Map saved"); return; }
+ if(act==="map-ai"){ if(!ui.mapAi.confirm){ ui.mapAi.desc=($("#mai-desc")||{}).value||ui.mapAi.desc; if(!ui.mapAi.desc.trim()){ toast("Describe the place first"); return; } ui.mapAi.confirm=true; render("keep"); return; } mapAi(b.dataset.id); return; }
+ if(act==="map-ai-stop"){ ui.mapAi.ctl&&ui.mapAi.ctl.abort(); return; }
+});
+document.addEventListener("input",e=>{ const t=e.target, K=ui.mk, m=ui.mw&&ui.mw.m; if(!t.id||!t.id.startsWith("mk-")) return;
+ const out=$("#"+t.id+"-v"); if(out) out.textContent=t.value;
+ if(t.id==="mk-size") K.size=num(t.value); if(t.id==="mk-scale") K.scale=num(t.value); if(t.id==="mk-dens") K.density=num(t.value); if(t.id==="mk-text") K.text=t.value;
+ if(!m) return;
+ if(t.id==="mk-name"){ m.name=t.value; queueMapSave(); }
+ const ob=K.sel&&K.sel.t==="o"&&m.objects[K.sel.i], lb=K.sel&&K.sel.t==="l"&&m.labels[K.sel.i];
+ if(t.id==="mk-oscale"&&ob){ ob.s=num(t.value); queueMapSave(); redrawCanvases(); }
+ if(t.id==="mk-ltext"&&lb){ lb.text=t.value.slice(0,60); queueMapSave(); redrawCanvases(); } });
+document.addEventListener("change",e=>{ const t=e.target, K=ui.mk, m=ui.mw&&ui.mw.m; if(!t.id||!t.id.startsWith("mk-")) return;
+ if(t.id==="mk-rot") K.rot=t.checked; if(t.id==="mk-tsize") K.tsize=t.value; if(t.id==="mk-tstyle") K.tstyle=t.value; if(t.id==="mk-thid") K.thidden=t.checked;
+ if(!m) return; const lb=K.sel&&K.sel.t==="l"&&m.labels[K.sel.i], ob=K.sel&&K.sel.t==="o"&&m.objects[K.sel.i];
+ if(t.id==="mk-style"){ m.style=t.value; } if(t.id==="mk-grid") m.grid=t.checked; if(t.id==="mk-frame") m.frame=t.checked; if(t.id==="mk-fogon") m.fogOn=t.checked;
+ if(t.id==="mk-ohid"&&ob) ob.hidden=t.checked; if(lb){ if(t.id==="mk-lsize") lb.size=t.value; if(t.id==="mk-lstyle") lb.style=t.value; if(t.id==="mk-lhid") lb.hidden=t.checked; }
+ if(["mk-style","mk-grid","mk-frame","mk-fogon","mk-ohid","mk-lsize","mk-lstyle","mk-lhid"].includes(t.id)){ queueMapSave(); redrawCanvases(); t.blur(); } });
+document.addEventListener("keydown",e=>{ if(!/^#map-/.test(location.hash)||!isDM()||typing()) return; const k=e.key.toLowerCase();
+ if((e.ctrlKey||e.metaKey)&&k==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); } else if((e.ctrlKey||e.metaKey)&&k==="y"){ e.preventDefault(); redo(); }
+ else if((k==="delete"||k==="backspace")&&ui.mk.sel){ const m=ui.mw.m; pushUndo(); if(ui.mk.sel.t==="o") m.objects.splice(ui.mk.sel.i,1); else m.labels.splice(ui.mk.sel.i,1); ui.mk.sel=null; queueMapSave(); const p=$(".mk-panel"); if(p) p.innerHTML=mkPanel(m); redrawCanvases(); } });
+
+/* ================= play mat ================= */
+const TOKCOL=["#c0392b","#2e86c1","#27ae60","#8e44ad","#d68910","#16a085","#7f8c8d","#c2185b"];
+const toks=mid=>Object.entries((S.data.tokens||{})[mid]||{}).map(([id,t])=>Object.assign({id},t));
+const tokSubs={};
+function ensureTokSub(mid){ S.data.tokens=S.data.tokens||{}; if(tokSubs[mid]) return;
+ if(S.db){ tokSubs[mid]=S.db.collection("mats").doc(mid).collection("tokens").onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>m[d.id]=d.data()); S.data.tokens[mid]=m; render(); },()=>{}); }
+ else { S.data.tokens[mid]=LS.get("codex2:tok:"+mid)||{}; tokSubs[mid]=()=>{}; } }
+function putTok(mid,id,doc){ doc.updatedAt=Date.now(); S.data.tokens[mid]=Object.assign({},S.data.tokens[mid],{[id]:doc});
+ if(S.db){ const k="tok/"+mid+"/"+id; chain[k]=(chain[k]||Promise.resolve()).then(()=>S.db.collection("mats").doc(mid).collection("tokens").doc(id).set(doc)).catch(writeFail); }
+ else LS.set("codex2:tok:"+mid,S.data.tokens[mid]); }
+function delTok(mid,id){ const m=Object.assign({},S.data.tokens[mid]); delete m[id]; S.data.tokens[mid]=m;
+ if(S.db){ const k="tok/"+mid+"/"+id; chain[k]=(chain[k]||Promise.resolve()).then(()=>S.db.collection("mats").doc(mid).collection("tokens").doc(id).delete()).catch(()=>{}); }
+ else LS.set("codex2:tok:"+mid,m); }
+function tokHp(t){ if(t.charId){ const c=S.data.characters[t.charId]; return c?[num(c.hpCur),num(c.hpMax)]:[0,0]; } return [num(t.hp),num(t.hpMax)]; }
+function viewMats(){ const L=mats().sort(byUpdated);
+ return `<section class="section"><div class="section-head"><h2>Play mat</h2>${isDM()?`<button class="btn primary" data-act="new-mat">New play mat</button>`:""}</div>
+ <p class="lede">A shared battle grid. Drop character and monster tokens on a map, drag them around, roll initiative and track HP. Everyone with the page open sees moves as they happen.</p>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:L.length?`<div class="grid">${L.map(x=>{ const mp=x.mapId&&S.data.maps[x.mapId]; return `<a class="card" href="#mat-${x.id}"><span class="eyebrow">${mp?"Map: "+esc(mp.name||"Untitled"):"Blank grid"}</span><h3>${esc(x.name||"Encounter")}</h3><p class="meta">Round ${fmt(x.round||1)}</p></a>`; }).join("")}</div>`
+ :emptyBox("No play mats yet",isDM()?"Start one on a blank grid, or open a map and choose Play on this map.":"The DM hasn't set up a play mat yet.",isDM()?"new-mat":null,"Start a play mat")}</section>`; }
+function viewMat(id){
+ const mat=S.data.mats[id]; if(!mat) return notFound("play mat","playmat"); ensureTokSub(id);
+ const dm=isDM(), Z=ui.matZoom; const mp=mat.mapId&&S.data.maps[mat.mapId]?workMap(mat.mapId):blankGrid();
+ const T=toks(id).filter(t=>dm||!t.hidden); const order=(mat.order||[]).filter(o=>T.some(t=>t.id===o.t)); const act=order.length?order[(mat.turn||0)%order.length]:null;
+ const fogOf=(x,y)=>mp.fogOn&&!dm&&mp.fog[y*mp.w+x]!=="1";
+ const tokHtml=T.filter(t=>!fogOf(t.x,t.y)).map(t=>{ const [h,hm]=tokHp(t); const s=num(t.size)||1; const pct=hm?Math.max(0,Math.min(100,h/hm*100)):0;
+  return `<button class="tok ${t.hidden?"hid":""} ${act&&act.t===t.id?"act":""} ${ui.matSel===t.id?"sel":""}" data-tok="${t.id}" style="left:${num(t.x)*Z+Z*.08}px;top:${num(t.y)*Z+Z*.08}px;width:${s*Z*.84}px;height:${s*Z*.84}px;background:${esc(t.color||"#7f8c8d")};font-size:${Math.max(10,Z*.32)}px" aria-label="${esc(t.name)}">${esc((t.name||"?").split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase())}${hm?`<span class="hpb"><i style="width:${pct}%"></i></span>`:""}</button>`; }).join("");
+ const sel=T.find(t=>t.id===ui.matSel);
+ let selCard=`<div class="card"><span class="eyebrow">Token</span><p class="muted">Tap a token to see it. Drag to move.</p></div>`;
+ if(sel){ const [h,hm]=tokHp(sel);
+  selCard=`<div class="card"><span class="eyebrow">${sel.charId?"Character":"Monster or NPC"}${sel.hidden?" · hidden from players":""}</span><h3>${esc(sel.name)}</h3>
+  ${hm?meter("hp","HP",h,hm):""}
+  <div class="adj"><input type="number" id="tokAmt" placeholder="Amount" aria-label="HP amount"><button class="btn small" data-act="tok-hp" data-v="-1">Damage</button><button class="btn small" data-act="tok-hp" data-v="1">Heal</button></div>
+  <div class="actions">${sel.charId?`<a class="btn small" href="#char-${sel.charId}">Open sheet</a>`:""}${dm?`<button class="btn small" data-act="tok-hide">${sel.hidden?"Show to players":"Hide from players"}</button><button class="btn small" data-act="tok-size">Size ${num(sel.size)||1}×</button>`:""}${(dm||sel.charId)?`<button class="btn small danger" data-act="tok-del">Remove</button>`:""}</div></div>`; }
+ const C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+ return `<a href="#playmat" class="muted">← All play mats</a>
+ <section class="sheet-head"><span class="eyebrow">Play mat${mat.mapId&&S.data.maps[mat.mapId]?` · <a href="#map-${mat.mapId}">${esc(S.data.maps[mat.mapId].name||"Map")}</a>`:" · blank grid"}</span><h1>${esc(mat.name||"Encounter")}</h1></section>
+ <div class="mat-wrap"><div class="section" style="min-width:0">
+  <div class="mapbar"><span class="muted">Zoom</span><button class="btn small" data-act="matzoom" data-v="-6" aria-label="Zoom out">−</button><button class="btn small" data-act="matzoom" data-v="6" aria-label="Zoom in">+</button>
+   ${dm&&mp.fogOn?`<span class="muted" style="margin-left:8px">Fog</span>${[["off","Move tokens"],["reveal","Reveal"],["hide","Hide"]].map(([k,n])=>`<button class="btn small ${ui.matFog===k?"primary":""}" data-act="matfog" data-v="${k}">${n}</button>`).join("")}`:""}</div>
+  <div class="map-frame canvas-frame" id="matf-${id}"><div class="mat-stage"><canvas id="matcv" data-mat="${id}"></canvas><div class="tok-layer">${tokHtml}</div></div></div>
+  ${dm?dmBox("mat-"+id):""}
+ </div>
+ <aside class="side">
+  <div class="card"><div class="row" style="justify-content:space-between"><span class="eyebrow">Turn order</span><span class="mono">Round ${fmt(mat.round||1)}</span></div>
+   ${order.length?`<ol class="clean" style="counter-reset:none">${order.map((o,i)=>{ const t=T.find(x=>x.id===o.t); return `<li class="row" style="justify-content:space-between;${act&&act.t===o.t?"font-weight:700;color:var(--brass)":""}"><span>${act&&act.t===o.t?"▶ ":""}${esc(t?t.name:"?")}</span><span class="mono">${o.v}</span></li>`; }).join("")}</ol>`:`<p class="muted">No initiative rolled yet.</p>`}
+   <div class="actions">${dm?`<button class="btn small primary" data-act="init" data-id="${id}">Roll initiative</button>`:""}${order.length?`<button class="btn small" data-act="next-turn" data-id="${id}">Next turn</button>`:""}${dm&&order.length?`<button class="btn small" data-act="end-combat" data-id="${id}">End combat</button>`:""}</div></div>
+  ${selCard}
+  <div class="card"><span class="eyebrow">Add a token</span>
+   ${C.length?`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px"><select id="addChar" aria-label="Character" style="width:100%;min-width:0">${C.map(c=>`<option value="${c.id}">${esc(c.name||"Unnamed")}</option>`).join("")}</select><button class="btn small" data-act="add-char" data-id="${id}">Add</button></div>`:`<p class="meta">No characters yet.</p>`}
+   ${dm?`<div style="display:grid;grid-template-columns:minmax(0,1fr) 4.6em 4.6em;gap:6px"><input type="text" id="mon-name" style="min-width:0;width:100%" placeholder="Monster name" aria-label="Monster name"><input type="number" id="mon-hp" placeholder="HP" aria-label="Monster HP" style="min-width:0;width:100%"><input type="number" id="mon-init" placeholder="Init+" aria-label="Initiative bonus" style="min-width:0;width:100%"></div>
+   <div class="row"><label class="row" style="gap:6px"><input type="checkbox" id="mon-hid"> Hidden</label><span style="flex:1"></span><button class="btn small" data-act="add-mon" data-id="${id}">Add monster</button></div>`:""}</div>
+  <div class="card"><span class="eyebrow">Table dice</span><div class="die-row">${[4,6,8,10,12,20].map(d=>`<button class="btn small" data-act="mat-roll" data-v="${d}" data-id="${id}">d${d}</button>`).join("")}</div>
+   ${(mat.log||[]).length?`<div class="log">${mat.log.slice(0,10).map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:`<p class="meta">Rolls here are shared with the whole table.</p>`}</div>
+  ${dm?`<div class="card"><span class="eyebrow">Encounter</span>${fld("mat-name","Name",mat.name,"text")}<div class="actions"><button class="btn small" data-act="mat-name" data-id="${id}">Rename</button><span style="flex:1"></span><button class="btn small danger" data-act="mat-del" data-id="${id}">Delete play mat</button></div></div>`:""}
+ </aside></div>`;
+}
+function newMatFor(mapId){ const k=rid(); put("mats",k,{name:mapId&&S.data.maps[mapId]?(S.data.maps[mapId].name||"Encounter"):"Encounter",mapId:mapId||"",order:[],turn:0,round:1,log:[],createdAt:Date.now()},true); go("mat-"+k); }
+function matLog(id,line){ const m=clone(S.data.mats[id]); m.log=[line,...(m.log||[])].slice(0,20); put("mats",id,m,true); }
+function freeSpot(id){ const mat=S.data.mats[id]; const mp=mat.mapId&&S.data.maps[mat.mapId]?workMap(mat.mapId):blankGrid(); const used=new Set(toks(id).map(t=>t.x+","+t.y));
+ for(let y=0;y<mp.h;y++) for(let x=0;x<mp.w;x++){ if(used.has(x+","+y)) continue; if(mp.fogOn&&mp.fog[y*mp.w+x]!=="1") continue; const t=mp.paint[(y*R+2)*mp.w*R+x*R+2]; if(t==="#"||t==="d"||t==="l"||t==="w") continue; return [x,y]; } return [0,0]; }
+
+/* ================= extra events ================= */
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act, id=b.dataset.id;
+ if(act==="role"){ if(!CAP.canDm) return; ui.role=b.dataset.v; LS.set("codex2:role",ui.role); render(true); toast(isDM()?"DM mode":"Player mode: DM tools and secrets are hidden"); return; }
+ if(act==="ai-gen"){ aiGen(); return; }
+ if(act==="ai-stop"){ ui.ai.ctl&&ui.ai.ctl.abort(); return; }
+ if(act==="ai-noimg"){ if(ui.ai.imgUrl) URL.revokeObjectURL(ui.ai.imgUrl); ui.ai.file=null; ui.ai.imgUrl=""; render(true); return; }
+ if(act==="ai-clear"){ ui.ai.result=null; render(true); return; }
+ if(act==="ai-save"){ const r=ui.ai.result; if(!r) return; const k=rid(); const doc=Object.assign(newChar(),r,{campaign:ui.ai.camp,hpCur:r.hpMax,enCur:r.enMax}); put("characters",k,doc,true); ui.ai.result=null; toast("Character saved"); go("char-"+k); return; }
+ if(act==="new-map"){ const k=rid(); put("maps",k,newMap(),true); go("map-"+k); return; }
+ if(act==="map-mat"){ saveMapNow(); newMatFor(id); return; }
+ if(act==="new-mat"){ newMatFor(""); return; }
+ if(act==="matzoom"){ ui.matZoom=Math.max(20,Math.min(80,ui.matZoom+num(b.dataset.v))); render("keep"); return; }
+ if(act==="matfog"){ ui.matFog=b.dataset.v; render("keep"); return; }
+ const mid=(location.hash.match(/^#mat-(\w+)$/)||[])[1];
+ if(act==="add-char"){ const cid=v("addChar"); const c=S.data.characters[cid]; if(!c) return; const [x,y]=freeSpot(id); const n=toks(id).length; putTok(id,rid(),{name:c.name||"Hero",charId:cid,x,y,size:1,color:TOKCOL[n%TOKCOL.length],init:0,hidden:false}); render("keep"); return; }
+ if(act==="add-mon"){ const name=v("mon-name")||"Monster"; const hp=num(v("mon-hp")); const [x,y]=freeSpot(id); putTok(id,rid(),{name,hp,hpMax:hp,init:num(v("mon-init")),x,y,size:1,color:"#5b2c2c",hidden:$("#mon-hid").checked}); render("keep"); return; }
+ if(act==="mat-roll"){ const d=+b.dataset.v, r=roll(d); matLog(id,`${isDM()?"DM":"Player"} rolled d${d}: ${r}${d===20&&r===20?" (natural 20!)":d===20&&r===1?" (natural 1)":""}`); render("keep"); return; }
+ if(act==="init"){ const all=toks(id); if(!all.length){ toast("Add tokens first"); return; } const order=all.map(t=>({t:t.id,v:roll(20)+num(t.init)})).sort((a,b)=>b.v-a.v); const m=clone(S.data.mats[id]); m.order=order; m.turn=0; m.round=1; m.log=["Initiative rolled",...(m.log||[])].slice(0,20); put("mats",id,m,true); render("keep"); return; }
+ if(act==="next-turn"){ const m=clone(S.data.mats[id]); const n=(m.order||[]).length; if(!n) return; m.turn=(num(m.turn)+1); if(m.turn>=n){ m.turn=0; m.round=num(m.round||1)+1; } put("mats",id,m,true); render("keep"); return; }
+ if(act==="end-combat"){ const m=clone(S.data.mats[id]); m.order=[]; m.turn=0; m.round=1; put("mats",id,m,true); render("keep"); return; }
+ if(act==="mat-name"){ const m=clone(S.data.mats[id]); m.name=v("mat-name"); put("mats",id,m,true); render("keep"); toast("Renamed"); return; }
+ if(act==="mat-del"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again to delete"; b.classList.add("primary"); return; } toks(id).forEach(t=>delTok(id,t.id)); del("mats",id); go("playmat"); return; }
+ if(mid&&ui.matSel&&["tok-hp","tok-hide","tok-size","tok-del"].includes(act)){ const t=clone(S.data.tokens[mid][ui.matSel]); if(!t) return;
+  if(act==="tok-hp"){ const a=Math.abs(num(($("#tokAmt")||{}).value)); if(!a){ toast("Type an amount first"); return; } const s=num(b.dataset.v);
+   if(t.charId){ const c=getC(t.charId); if(c){ c.hpCur=Math.max(0,Math.min(num(c.hpMax)||Infinity,num(c.hpCur)+s*a)); put("characters",t.charId,c,true); } }
+   else { t.hp=Math.max(0,Math.min(num(t.hpMax)||Infinity,num(t.hp)+s*a)); putTok(mid,ui.matSel,t); } }
+  if(act==="tok-hide"){ t.hidden=!t.hidden; putTok(mid,ui.matSel,t); }
+  if(act==="tok-size"){ t.size=(num(t.size)||1)>=3?1:(num(t.size)||1)+1; putTok(mid,ui.matSel,t); }
+  if(act==="tok-del"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again"; return; } delTok(mid,ui.matSel); ui.matSel=null; }
+  render("keep"); return; }
+});
+document.addEventListener("input",e=>{ const t=e.target;
+ if(t.id==="ai-desc") ui.ai.desc=t.value; if(t.id==="ai-camp") ui.ai.camp=t.value; if(t.id==="mai-desc"){ ui.mapAi.desc=t.value; ui.mapAi.confirm=false; }
+ });
+document.addEventListener("change",e=>{ const t=e.target;
+ if(t.id==="ai-power") ui.ai.power=t.value;
+ if(t.id==="ai-img"&&t.files&&t.files[0]){ const f=t.files[0]; if(CAP.img&&f.size>CAP.img.maxInputBytes){ toast("That picture is too big. Try a smaller one."); t.value=""; return; } ui.ai.file=f; ui.ai.imgUrl=URL.createObjectURL(f); render(true); }
+ if(t.id==="dmnote"){ const k=t.dataset.key; const cur=S.data.dm&&S.data.dm[k]; if((cur&&cur.text||"")!==t.value){ S.data.dm=Object.assign({},S.data.dm,{[k]:{text:t.value}}); if(S.db){ S.db.collection("dm").doc(k).set({text:t.value,updatedAt:Date.now()}).then(()=>toast("DM notes saved")).catch(()=>toast("Couldn't save DM notes. Only editors can.")); } else { LS.set("codex2:dm",S.data.dm); toast("DM notes saved"); } } }
+});
+/* pointer: map editor, mat fog, token dragging */
+let painting=null, drag=null;
+function matMap(cv){ const mat=S.data.mats[cv.dataset.mat]; return mat&&mat.mapId&&S.data.maps[mat.mapId]?workMap(mat.mapId):null; }
+document.addEventListener("pointerdown",e=>{
+ const tok=e.target.closest&&e.target.closest(".tok");
+ if(tok&&ui.matFog==="off"){ const mid=(location.hash.match(/^#mat-(\w+)$/)||[])[1]; if(!mid) return; e.preventDefault(); tok.setPointerCapture(e.pointerId);
+  drag={el:tok,id:tok.dataset.tok,mid,sx:e.clientX,sy:e.clientY,ox:parseFloat(tok.style.left),oy:parseFloat(tok.style.top),moved:false}; ui.dragging=true; return; }
+ const cv=e.target.closest&&e.target.closest("#mapcv,#matcv"); if(!cv||!isDM()) return;
+ if(cv.id==="mapcv"){ if(!cv.closest(".mk-stage")) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); painting=cv; ui.dragging=true; mkDown(cv,e); return; }
+ if(ui.matFog==="off") return; const m=matMap(cv); if(!m) return;
+ e.preventDefault(); cv.setPointerCapture(e.pointerId); painting=cv; ui.dragging=true; const [sx,sy]=subAt(cv,e,m); fogAt(m,sx,sy,ui.matFog==="reveal"?"1":"0",3); queueMapSave(); redrawCanvases();
+});
+document.addEventListener("pointermove",e=>{
+ if(drag){ const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy; if(Math.abs(dx)+Math.abs(dy)>4) drag.moved=true; drag.el.style.left=(drag.ox+dx)+"px"; drag.el.style.top=(drag.oy+dy)+"px"; return; }
+ if(!painting) return;
+ if(painting.id==="mapcv"){ mkMove(painting,e); return; }
+ const m=matMap(painting); if(!m) return; const [sx,sy]=subAt(painting,e,m); fogAt(m,sx,sy,ui.matFog==="reveal"?"1":"0",3); queueMapSave(); redrawCanvases();
+});
+function endPointer(){
+ if(drag){ const d=drag; drag=null; ui.dragging=false;
+  if(!d.moved){ ui.matSel=d.id; render("keep"); return; }
+  const Z=ui.matZoom, t=clone(S.data.tokens[d.mid]&&S.data.tokens[d.mid][d.id]); if(!t){ render("keep"); return; }
+  const mat=S.data.mats[d.mid]; const mp=mat&&mat.mapId&&S.data.maps[mat.mapId]?workMap(mat.mapId):blankGrid();
+  t.x=Math.max(0,Math.min(mp.w-1,Math.round((parseFloat(d.el.style.left)-Z*.08)/Z))); t.y=Math.max(0,Math.min(mp.h-1,Math.round((parseFloat(d.el.style.top)-Z*.08)/Z)));
+  putTok(d.mid,d.id,t); ui.matSel=d.id; render("keep"); return; }
+ if(painting){ if(painting.id==="mapcv") mkUp(); painting=null; ui.dragging=false; if(pending) setTimeout(()=>{ if(!ui.dragging) render(); },0); }
+}
+document.addEventListener("pointerup",endPointer); document.addEventListener("pointercancel",endPointer);
+
+/* ================= shops ================= */
+const newShop=()=>({name:"",campaign:"",keeper:"",blurb:"",currency:"gold",open:true,items:[],log:[],createdAt:Date.now()});
+const shops=()=>Object.entries(S.data.shops||{}).map(([id,s])=>Object.assign({id},s));
+const getS=id=>S.data.shops&&S.data.shops[id]?clone(S.data.shops[id]):null;
+const RARITY=["Common","Uncommon","Rare","Very rare","Legendary","Artifact"];
+const rarTier=r=>{ const i=RARITY.findIndex(x=>x.toLowerCase()===String(r||"").trim().toLowerCase()); return i<0?0:[0,1,2,3,4,5][i]; };
+const rarChip=r=>r?`<span class="rk t${rarTier(r)}" style="font-family:var(--f-body);min-width:0">${esc(r)}</span>`:"";
+const stockOf=it=>String(it.stock==null?"":it.stock).trim();
+const inStock=it=>stockOf(it)===""||num(it.stock)>0;
+ui.shop={buyer:"",cat:"all",ai:{busy:false,err:"",ctl:null,hint:""}};
+function viewShops(){ const L=shops().sort(byUpdated).filter(s=>isDM()||s.open!==false||true);
+ return `<section class="section"><div class="section-head"><h2>Shops</h2><button class="btn primary dm-only" data-act="new-shop">New shop</button></div>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:L.length?`<div class="grid">${L.map(s=>`<a class="card" href="#shop-${s.id}"><span class="eyebrow">${esc(s.campaign||"Shop")}${s.open===false?" · closed":""}</span><h3>${esc(s.name||"Untitled shop")}</h3><p class="meta">${s.keeper?"Run by "+esc(s.keeper)+" · ":""}${(s.items||[]).filter(i=>isDM()||!i.hidden).length} items</p></a>`).join("")}</div>`
+ :emptyBox("No shops yet",isDM()?"Set up a blacksmith, an apothecary or a black market. Add items with prices and stock, and players buy with their character's money.":"The DM hasn't opened any shops yet.",isDM()?"new-shop":null,"Open the first shop")}</section>`; }
+function viewShop(id){
+ const s=getS(id); if(!s) return notFound("shop","shops");
+ const dm=isDM(), cur=s.currency||"gold";
+ const C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+ const buyerId=(ui.shop.buyer&&S.data.characters[ui.shop.buyer])?ui.shop.buyer:(C[0]&&C[0].id); const buyer=buyerId&&S.data.characters[buyerId];
+ const items=(s.items||[]).map((it,i)=>Object.assign({i},it)).filter(it=>dm||!it.hidden);
+ const cats=[...new Set(items.map(it=>it.cat).filter(Boolean))];
+ const shown=items.filter(it=>ui.shop.cat==="all"||it.cat===ui.shop.cat);
+ const closed=s.open===false;
+ const card=it=>{ const st=stockOf(it), price=num(it.price), afford=buyer&&num(buyer.money)>=price, avail=inStock(it);
+  return `<div class="card shop-item ${avail?"":"sold"}"><div class="row" style="justify-content:space-between;align-items:start"><div style="display:grid;gap:2px;min-width:0"><h3>${esc(it.name||"Unnamed item")}</h3><span class="meta">${esc(it.cat||"")}</span></div>${rarChip(it.rarity)}</div>
+  ${it.desc?`<p class="muted" style="font-size:.94rem">${esc(it.desc)}</p>`:""}
+  <div class="row" style="justify-content:space-between;margin-top:auto"><span class="price mono">${fmt(price)} <small>${esc(cur)}</small></span><span class="meta">${st===""?"In stock":num(st)>0?`${fmt(num(st))} left`:"Sold out"}${it.hidden?" · hidden":""}</span></div>
+  <div class="actions">${closed&&!dm?"":`<button class="btn small primary" data-act="buy" data-id="${id}" data-i="${it.i}" ${!buyer||!avail||!afford||closed?"disabled":""}>${!avail?"Sold out":!buyer?"Pick a buyer":!afford?"Can't afford":"Buy"}</button>`}${dm&&buyer?`<button class="btn small" data-act="give" data-id="${id}" data-i="${it.i}" ${avail?"":"disabled"}>Give free</button>`:""}</div></div>`; };
+ return `<a href="#shops" class="muted">← All shops</a>
+ <section class="sheet-head"><span class="eyebrow">${esc(s.campaign||"Shop")}${s.keeper?" · run by "+esc(s.keeper):""}</span>
+  <div class="row" style="justify-content:space-between"><h1>${esc(s.name||"Untitled shop")}</h1><div class="actions"><span class="tag" style="${closed?"color:var(--danger)":"color:var(--arcane)"}">${closed?"Closed":"Open"}</span>${dm?`<button class="btn" data-act="shop-open" data-id="${id}">${closed?"Open shop":"Close shop"}</button><a class="btn" href="#edit-shop-${id}">Edit shop &amp; stock</a>`:""}</div></div>
+  ${s.blurb?`<p class="lede">${esc(s.blurb)}</p>`:""}</section>
+ ${closed&&!dm?`<div class="note">The shop is closed right now. You can browse, but nothing's for sale until the DM opens it.</div>`:""}
+ <div class="mat-wrap"><div class="section" style="min-width:0">
+  ${cats.length>1?`<div class="mk-cats shop-cats"><button class="${ui.shop.cat==="all"?"on":""}" data-act="shop-cat" data-v="all">All</button>${cats.map(c=>`<button class="${ui.shop.cat===c?"on":""}" data-act="shop-cat" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div>`:""}
+  ${shown.length?`<div class="grid">${shown.map(card).join("")}</div>`:emptyBox("The shelves are empty",dm?"Add items in Edit shop & stock, or let AI stock the shelves.":"Nothing for sale yet.",null,"")}
+  ${dm?dmBox("shop-"+id):""}
+ </div><aside class="side">
+  <div class="card"><span class="eyebrow">Shopping as</span>${C.length?`<select id="shop-buyer" aria-label="Buyer">${C.map(c=>`<option value="${c.id}" ${c.id===buyerId?"selected":""}>${esc(c.name||"Unnamed")}</option>`).join("")}</select>
+   <div class="row" style="justify-content:space-between;align-items:end"><div><span class="eyebrow">Money</span><div class="points">${fmt(num(buyer&&buyer.money))} <small style="font-size:.9rem">${esc(cur)}</small></div></div><a class="btn small" href="#char-${buyerId}">Open sheet</a></div>
+   ${dm?`<div class="adj"><input type="number" id="shop-money" placeholder="Amount" aria-label="Money amount"><button class="btn small" data-act="shop-money" data-v="1" data-id="${id}">Add</button><button class="btn small" data-act="shop-money" data-v="-1" data-id="${id}">Take</button></div>`:""}
+   <p class="meta">Bought items go into this character's Items list.</p>`:`<p class="muted">Create a character to buy things.</p><div><button class="btn primary" data-act="new-char">New character</button></div>`}</div>
+  ${buyer&&(buyer.items||[]).length?`<div class="card"><span class="eyebrow">${esc(buyer.name||"Their")} inventory</span><ul class="clean">${buyer.items.slice(-8).reverse().map(i=>`<li>${esc(i.name)}</li>`).join("")}</ul></div>`:""}
+  <div class="card"><span class="eyebrow">Recent sales</span>${(s.log||[]).length?`<div class="log">${s.log.slice(0,12).map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:`<p class="meta">Nothing sold yet.</p>`}</div>
+ </aside></div>`;
+}
+function editShop(id){
+ const s=(ui.shopDraft&&ui.shopDraft.id===id)?ui.shopDraft.s:getS(id); if(!s) return notFound("shop","shops"); const A=ui.shop.ai;
+ return `<a href="#shop-${id}" class="muted">← Back to shop</a>
+ <section class="sheet-head"><span class="eyebrow">Editing shop</span><h1>${esc(s.name||"New shop")}</h1></section>
+ <form class="form" onsubmit="return false">${campOptions()}
+  <div class="fieldset"><h3>Shop</h3><div class="form-grid">
+   ${fld("s-name","Shop name",s.name,"text",{ph:"The Rusty Anvil"})}${fld("s-keeper","Shopkeeper",s.keeper,"text",{ph:"Brasspaw"})}
+   <label class="fld"><span>Campaign</span><input type="text" id="s-camp" list="camps" value="${esc(s.campaign)}"></label>${fld("s-cur","Currency",s.currency||"gold","text",{ph:"gold, credits, ryo"})}
+   ${fld("s-blurb","Description",s.blurb,"area",{wide:1,ph:"What the shop looks like and what it's known for"})}
+   <label class="row" style="gap:8px"><input type="checkbox" id="s-open" ${s.open!==false?"checked":""}> Open for business</label></div></div>
+  <div class="fieldset"><h3>Stock</h3><p class="edit-hint">Leave Stock blank for unlimited. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
+  <div class="fieldset"><h3>Stock the shelves with AI</h3>
+   ${CAP.sample?`<label class="fld"><span>What should it sell? (optional)</span><input type="text" id="s-aihint" value="${esc(A.hint)}" placeholder="Cheap potions, a few cursed trinkets, one legendary blade"></label>
+   <p class="edit-hint">Adds 6 to 10 items that fit the shop and campaign. Prices follow your existing items and characters' money. Review, then Save.</p>
+   <div class="actions"><button type="button" class="btn" data-act="shop-ai" data-id="${id}" ${A.busy?"disabled":""}>${A.busy?"Stocking…":"Stock with AI"}</button>${A.busy?`<button type="button" class="btn" data-act="shop-ai-stop">Stop</button>`:""}</div>${A.err?`<div class="note">${esc(A.err)}</div>`:""}`:`<p class="muted">Open this page on claude.ai or in the Claude app to stock shops with AI.</p>`}</div>
+  <div class="actions"><button type="button" class="btn primary" data-act="save-shop" data-id="${id}">Save shop</button><a class="btn" href="#shop-${id}">Cancel</a><span style="flex:1"></span><button type="button" class="btn danger" data-act="del" data-col="shops" data-id="${id}">Delete shop</button></div>
+ </form>`;
+}
+function readShopForm(id){ const s=getS(id); if(!s) return null;
+ Object.assign(s,{name:v("s-name"),keeper:v("s-keeper"),campaign:v("s-camp"),currency:v("s-cur")||"gold",blurb:v("s-blurb"),open:$("#s-open").checked,
+  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
+async function shopAi(id){ const A=ui.shop.ai; if(A.busy) return; const s=readShopForm(id); if(!s) return;
+ const world=worlds().find(w=>w.name&&w.name===s.campaign); const money=chars().map(c=>num(c.money)).filter(Boolean);
+ const prompt=`Stock a shop in a homebrew tabletop RPG.
+Shop: ${s.name||"a general store"}${s.keeper?", run by "+s.keeper:""}. ${s.blurb||""}
+${world?`World: ${world.name}. ${str(world.blurb,900)}`:""}
+Currency: ${s.currency||"gold"}.
+${s.items.length?`Items already on the shelves (don't repeat them; match their price scale): ${JSON.stringify(s.items.slice(0,12).map(i=>({name:i.name,price:i.price,rarity:i.rarity})))}`:""}
+${money.length?`Player characters currently carry between ${Math.min(...money)} and ${Math.max(...money)} ${s.currency||"gold"}.`:""}
+${A.hint?`The DM wants: ${A.hint}`:""}
+Return ONLY JSON: {"items":[{"name":string,"cat":string (Weapons, Armor, Potions, Scrolls, Magic items, Gear, Food, Curiosities, or similar),"rarity":"Common"|"Uncommon"|"Rare"|"Very rare"|"Legendary"|"Artifact","price":number,"stock":number (1-10, or 0 for unlimited),"desc":string (one or two sentences: what it does, with any game effect)}] (6 to 10 items)}`;
+ A.busy=true; A.err=""; A.ctl=new AbortController(); ui.shopDraft={id,s}; render(true);
+ try{ const r=await CAP.sample.json(prompt,{signal:A.ctl.signal,modelTier:"default"});
+  const add=arr(r&&r.items,it=>it&&it.name?{id:rid(),name:str(it.name,80),cat:str(it.cat,30),rarity:RARITY.find(x=>x.toLowerCase()===String(it.rarity||"").toLowerCase())||"Common",price:Math.max(0,num(it.price)),stock:num(it.stock)>0?Math.round(num(it.stock)):"",desc:str(it.desc,300),hidden:false}:null,12);
+  if(!add.length) throw {code:"invalid_json"}; s.items=s.items.concat(add); ui.shopDraft={id,s}; toast(`${add.length} items added. Review them, then Save shop.`); }
+ catch(e){ A.err=aiErr(e); if(HIDE_CODES.includes(e&&e.code)) CAP.sample=null; }
+ A.busy=false; render(true); }
+function shopBuy(id,i,free){
+ const s=getS(id); const it=s&&s.items[i]; const cid=v("shop-buyer"); const c=cid&&getC(cid); if(!it||!c) return;
+ if(!inStock(it)){ toast("Sold out"); return; } if(s.open===false&&!free){ toast("The shop is closed"); return; }
+ const price=free?0:num(it.price); if(num(c.money)<price){ toast("Not enough "+(s.currency||"gold")); return; }
+ c.money=num(c.money)-price; c.items=(c.items||[]).concat([{name:it.name,desc:[it.rarity,it.desc].filter(Boolean).join(" · ")}]);
+ if(stockOf(it)!=="") it.stock=Math.max(0,num(it.stock)-1);
+ s.log=[`${c.name||"Someone"} ${free?"was given":"bought"} ${it.name}${free?"":" for "+fmt(price)+" "+(s.currency||"gold")}`,...(s.log||[])].slice(0,30);
+ put("characters",cid,c,true); put("shops",id,s,true); toast(free?`Gave ${it.name} to ${c.name||"them"}`:`Bought ${it.name}`); render("keep"); }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act, id=b.dataset.id;
+ if(act==="new-shop"){ const k=rid(); put("shops",k,newShop(),true); go("edit-shop-"+k); return; }
+ if(act==="shop-cat"){ ui.shop.cat=b.dataset.v; render("keep"); return; }
+ if(act==="buy"){ shopBuy(id,+b.dataset.i,false); return; }
+ if(act==="give"){ shopBuy(id,+b.dataset.i,true); return; }
+ if(act==="shop-open"){ const s=getS(id); s.open=s.open===false; put("shops",id,s,true); render("keep"); toast(s.open?"Shop opened":"Shop closed"); return; }
+ if(act==="shop-money"){ const cid=v("shop-buyer"), c=cid&&getC(cid); const a=Math.abs(num(v("shop-money"))); if(!c||!a){ toast("Type an amount first"); return; } c.money=Math.max(0,num(c.money)+num(b.dataset.v)*a); put("characters",cid,c,true); render("keep"); return; }
+ if(act==="save-shop"){ const s=readShopForm(id); if(!s) return; ui.shopDraft=null; put("shops",id,s,true); toast("Shop saved"); go("shop-"+id); return; }
+ if(act==="shop-ai"){ ui.shop.ai.hint=v("s-aihint"); shopAi(id); return; }
+ if(act==="shop-ai-stop"){ ui.shop.ai.ctl&&ui.shop.ai.ctl.abort(); return; }
+});
+document.addEventListener("change",e=>{ if(e.target.id==="shop-buyer"){ ui.shop.buyer=e.target.value; e.target.blur(); render("keep"); } });
+
+/* ================= render & routing ================= */
+function render(force){
+ if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
+ const h=(location.hash||"#home").slice(1); let html,nav="home",m;
+ ui.editing=false;
+ const frame=document.querySelector(".canvas-frame"), sx=frame?frame.scrollLeft:0, stp=frame?frame.scrollTop:0, fid=frame?frame.id:null, sy=window.scrollY;
+ if(h==="characters"){html=viewCharacters();nav="characters";}
+ else if((m=h.match(/^edit-char-(\w+)$/))){html=editChar(m[1]);nav="characters";ui.editing=true;}
+ else if((m=h.match(/^char-(\w+)$/))){html=viewChar(m[1]);nav="characters";}
+ else if(h==="trees"){html=viewTrees();nav="trees";}
+ else if((m=h.match(/^edit-tree-(\w+)$/))){html=editTree(m[1]);nav="trees";ui.editing=true;}
+ else if((m=h.match(/^tree-(\w+)$/))){html=viewTree(m[1]);nav="trees";}
+ else if(h==="worlds"){html=viewWorlds();nav="worlds";}
+ else if((m=h.match(/^edit-world-(\w+)$/))){html=editWorld(m[1]);nav="worlds";ui.editing=true;}
+ else if((m=h.match(/^world-(\w+)$/))){html=viewWorld(m[1]);nav="worlds";}
+ else if(h==="tools"){html=viewTools();nav="tools";}
+ else if(h==="ai-char"){html=viewAiChar();nav="characters";}
+ else if(h==="maps"){html=viewMaps();nav="maps";}
+ else if((m=h.match(/^map-(\w+)$/))){html=viewMap(m[1]);nav="maps";}
+ else if(h==="playmat"){html=viewMats();nav="playmat";}
+ else if(h==="shops"){html=viewShops();nav="shops";}
+ else if((m=h.match(/^edit-shop-(\w+)$/))){html=editShop(m[1]);nav="shops";ui.editing=true;}
+ else if((m=h.match(/^shop-(\w+)$/))){html=viewShop(m[1]);nav="shops";}
+ else if((m=h.match(/^mat-(\w+)$/))){html=viewMat(m[1]);nav="playmat";}
+ else if(h==="news"){html=viewNews();nav="news";}
+ else html=viewHome();
+ if(!/^edit-shop-/.test(h)) ui.shopDraft=null;
+ if(!isDM()&&/^edit-(tree|world|shop)-/.test(h)){ html=`<div class="empty"><h3>That's a DM page</h3><p class="muted">Switch to DM mode at the top to edit trees, worlds and shops.</p><a class="btn" href="#home">Home</a></div>`; ui.editing=false; }
+ if(CAP.readOnly&&!isDM()) html=`<div class="note">Your access is view-only, so changes won't save. Ask the DM to invite you by email with edit access in the Share menu so you can edit characters.</div>`+html;
+ if(S.note) html=`<div class="note">${esc(S.note)}</div>`+html;
+ $("#app").innerHTML=html;
+ $$("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.v===nav));
+ const pill=$("#savePill"); pill.textContent=S.mode==="live"?"Saved for the party":S.mode==="local"?"Saved in this browser":"Connecting…"; pill.classList.toggle("live",S.mode==="live");
+ document.body.classList.toggle("player",!isDM()); roleSwitch(); redrawCanvases();
+ const f2=document.querySelector(".canvas-frame"); if(f2&&f2.id===fid){ f2.scrollLeft=sx; f2.scrollTop=stp; }
+ if(force==="keep") window.scrollTo(0,sy);
+}
+window.addEventListener("hashchange",()=>{ render(true); window.scrollTo(0,0); });
+document.addEventListener("focusout",()=>setTimeout(()=>{ if(pending&&!ui.editing&&!typing()) render(); },0));
+const go=h=>{ if(location.hash==="#"+h) render(true); else location.hash=h; };
+
+/* ================= events ================= */
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act, id=b.dataset.id;
+ if(act==="new-char"){ const k=rid(); put("characters",k,newChar(),true); go("edit-char-"+k); return; }
+ if(act==="new-tree"){ const k=rid(); put("trees",k,newTree(),true); go("edit-tree-"+k); return; }
+ if(act==="new-world"){ const k=rid(); put("worlds",k,newWorld(),true); go("edit-world-"+k); return; }
+ if(act==="rep-add"){ const box=$(`[data-rep="${b.dataset.rep}"]`); box.insertAdjacentHTML("beforeend",repRow(b.dataset.rep,{})); const last=box.lastElementChild.querySelector("[data-k]"); if(last) last.focus(); return; }
+ if(act==="rep-del"){ b.closest(".rep-row").remove(); return; }
+ if(act==="del"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again to delete for everyone"; b.classList.add("primary"); return; }
+  const col=b.dataset.col; del(col,id);
+  if(col==="trees") chars().forEach(c=>{ if(c.unlocked&&c.unlocked[id]){ const cc=getC(c.id); delete cc.unlocked[id]; put("characters",c.id,cc,true); } });
+  toast("Deleted"); go(col); return; }
+ if(act==="save-char"){ const c=getC(id); if(!c) return;
+  Object.assign(c,{name:v("f-name"),player:v("f-player"),campaign:v("f-campaign"),race:v("f-race"),cls:v("f-cls"),bio:v("f-bio"),
+   tags:v("f-tags").split(",").map(s=>s.trim()).filter(Boolean),hpCur:num(v("f-hpCur")),hpMax:num(v("f-hpMax")),enLabel:v("f-enLabel")||"MP",enCur:num(v("f-enCur")),enMax:num(v("f-enMax")),
+   level:num(v("f-level")),levelCap:v("f-levelCap"),exp:num(v("f-exp")),expPer:num(v("f-expPer"))||100,sp:num(v("f-sp")),stat:num(v("f-stat")),money:num(v("f-money")),gainSp:num(v("f-gainSp")),gainStat:num(v("f-gainStat")),
+   stats:collect("stats"),skills:collect("skills"),moves:collect("moves"),items:collect("items"),sections:collect("sections")});
+  put("characters",id,c,true); toast("Sheet saved"); go("char-"+id); return; }
+ if(act==="save-world"){ const w=getW(id); if(!w) return; Object.assign(w,{name:v("w-name"),tag:v("w-tag"),blurb:v("w-blurb"),sections:collect("sections"),npcs:collect("npcs")}); put("worlds",id,w,true); toast("World saved"); go("world-"+id); return; }
+ if(act==="save-tree-meta"){ const t=getT(id); if(!t) return;
+  t.name=v("t-name"); t.campaign=v("t-campaign"); t.blurb=v("t-blurb");
+  t.lanes=v("t-lanes").split("\n").map(l=>{ const mm=l.match(/^\s*([\d.]+)\s*[:\-]\s*(.+)$/); return mm?{row:num(mm[1]),label:mm[2].trim()}:null; }).filter(Boolean);
+  put("trees",id,t,true); render("keep"); toast("Tree details saved"); return; }
+ if(act==="esel"){ ui.editSel[b.dataset.t]=b.dataset.n; render("keep"); const f=$("#nodeForm"); if(f) f.scrollIntoView({block:"nearest",behavior:"smooth"}); return; }
+ if(act==="new-node"){ delete ui.editSel[id]; render("keep"); return; }
+ if(act==="save-node"){ const t=getT(id); if(!t) return; t.nodes=t.nodes||[]; const name=v("n-name"); if(!name){ toast("Give the skill a name first"); return; }
+  const chk=k=>$$(`[data-chk="${k}"]:checked`).map(x=>x.value);
+  const selId=ui.editSel[id]; let n=t.nodes.find(x=>x.id===selId); const isNew=!n; if(isNew){ n={id:rid()}; t.nodes.push(n); }
+  Object.assign(n,{n:name,r:v("n-rank"),cost:v("n-cost")===""?"":num(v("n-cost")),d:v("n-desc"),req:chk("req"),any:chk("any"),ex:chk("ex"),ph:$("#n-ph").checked});
+  const map={}; t.nodes.forEach(x=>map[x.id]=x);
+  n.icon=v("n-icon").slice(0,3); put("trees",id,t,true);
+  if(isNew){ delete ui.editSel[id]; toast(name+" added"); } else toast(name+" saved");
+  render("keep"); return; }
+ if(act==="del-node"){ const t=getT(id); const selId=ui.editSel[id]; if(!t||!selId) return;
+  if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again to delete"; b.classList.add("primary"); return; }
+  t.nodes=t.nodes.filter(x=>x.id!==selId); t.nodes.forEach(x=>["req","any","ex"].forEach(k=>x[k]=(x[k]||[]).filter(r=>r!==selId)));
+  put("trees",id,t,true); delete ui.editSel[id]; toast("Skill deleted"); render("keep"); return; }
+ if(act==="sel"){ ui.sel[b.dataset.t]=b.dataset.n; render("keep"); return; }
+ if(act==="unlock"||act==="refund"){ const tid=b.dataset.t, t=getT(tid); const T2=$("#tc"); const cid=T2?T2.value:null; const c=cid&&getC(cid); if(!t||!c) return;
+  const n=(t.nodes||[]).find(x=>x.id===b.dataset.n); c.unlocked=c.unlocked||{}; const set=new Set(c.unlocked[tid]||[]); const cost=costOf(n);
+  if(act==="unlock"){ if(treeState(t,set,num(c.sp))[n.id]!=="open") return; set.add(n.id); c.sp=num(c.sp)-cost; toast((n.n||"Skill")+" unlocked"); }
+  else { if(!set.has(n.id)||!canRefund(t,set,n.id)) return; set.delete(n.id); c.sp=num(c.sp)+cost; toast((n.n||"Skill")+" refunded"); }
+  c.unlocked[tid]=[...set]; put("characters",cid,c,true); render("keep"); return; }
+ if(act==="die"){ ui.dice.d=+b.dataset.v; render(true); return; }
+ if(act==="roll"){ const D=ui.dice; D.n=Math.max(1,Math.min(50,parseInt($("#dn").value)||1)); D.mod=parseInt($("#dm").value)||0;
+  const rolls=Array.from({length:D.n},()=>roll(D.d)), total=rolls.reduce((a,x)=>a+x,0)+D.mod;
+  const label=`${D.n}d${D.d}${D.mod?(D.mod>0?"+":"")+D.mod:""}: [${rolls.join(", ")}]${D.mod?(D.mod>0?" + ":" − ")+Math.abs(D.mod):""}`;
+  D.last={n:D.n,d:D.d,rolls,total,label}; D.log.unshift(`${label} = ${total}`); D.log=D.log.slice(0,15); render(true); return; }
+ if(act==="save-costs"){ const rows=collect("costs").filter(r=>r.rank).map(r=>({rank:r.rank,cost:num(r.cost)})); put("settings","rules",{costs:rows},true); render(true); toast("Costs saved"); return; }
+ if(act==="reset-costs"){ put("settings","rules",{costs:DEFAULT_COSTS.map(([r,c])=>({rank:r,cost:c}))},true); render(true); toast("Default costs restored"); return; }
+ const cid=b.dataset.c; if(!cid) return; const c=getC(cid); if(!c) return;
+ if(act==="hp-"||act==="hp+"){ const a=Math.abs(num($("#hpAmt").value)); if(!a){toast("Type an amount first");return;} c.hpCur=Math.max(0,Math.min(num(c.hpMax),num(c.hpCur)+(act==="hp+"?a:-a))); }
+ else if(act==="en-"||act==="en+"){ const a=Math.abs(num($("#enAmt").value)); if(!a){toast("Type an amount first");return;} c.enCur=Math.max(0,Math.min(num(c.enMax),num(c.enCur)+(act==="en+"?a:-a))); }
+ else if(act==="rest"){ c.hpCur=num(c.hpMax); c.enCur=num(c.enMax); toast("Back to full"); }
+ else if(act==="xp"){ const a=b.dataset.v?num(b.dataset.v):num($("#xpAmt").value); if(!a){toast("Type an amount of EXP first");return;} c.exp=num(c.exp)+a; let ups=0; const per=num(c.expPer)||100;
+  while(c.exp>=per){ c.exp-=per; c.level=num(c.level)+1; c.sp=num(c.sp)+num(c.gainSp); c.stat=num(c.stat)+num(c.gainStat); ups++; }
+  toast(ups?`Level up! Now level ${c.level}: +${fmt(num(c.gainSp)*ups)} skill points, +${fmt(num(c.gainStat)*ups)} stat points`:`+${a} EXP`); }
+ else if(act==="money+"||act==="money-"){ const a=Math.abs(num($("#moneyAmt").value)); if(!a){toast("Type an amount first");return;} c.money=Math.max(0,num(c.money)+(act==="money+"?a:-a)); }
+ else if(act==="sp"){ c.sp=Math.max(0,num(c.sp)+num(b.dataset.v)); }
+ else if(act==="st"){ c.stat=Math.max(0,num(c.stat)+num(b.dataset.v)); }
+ else return;
+ put("characters",cid,c,true); render("keep");
+});
+document.addEventListener("input",e=>{
+ if(e.target.id==="q"){ ui.q=e.target.value; const pos=e.target.selectionStart; $("#app").innerHTML=(S.note?`<div class="note">${esc(S.note)}</div>`:"")+viewCharacters(); const q=$("#q"); q.focus(); try{q.setSelectionRange(pos,pos);}catch(_){} }
+});
+document.addEventListener("change",e=>{
+ if(e.target.id==="campSel"){ ui.camp=e.target.value; render(true); }
+ if(e.target.id==="tc"){ ui.treeChar[e.target.dataset.t]=e.target.value; e.target.blur(); render("keep"); }
+ if(e.target.id==="notes"){ const id=e.target.dataset.c, c=getC(id); if(c&&(c.notes||"")!==e.target.value){ c.notes=e.target.value; put("characters",id,c,true); toast("Notes saved"); } }
+ if(e.target.id==="dn"||e.target.id==="dm"){ ui.dice.n=Math.max(1,Math.min(50,parseInt($("#dn").value)||1)); ui.dice.mod=parseInt($("#dm").value)||0; }
+});
+render(true);
+initDb().then(initCaps);
+</script>
+
+</body></html>
