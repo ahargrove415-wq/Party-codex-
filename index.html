@@ -345,6 +345,35 @@ body.player .dm-only{display:none!important}
 const FB_CONFIG={apiKey:"AIzaSyCpC23kJbmrXdpUGy8TQL71X0K--_YYQEY",authDomain:"party-codex-fd673.firebaseapp.com",projectId:"party-codex-fd673",storageBucket:"party-codex-fd673.firebasestorage.app",messagingSenderId:"880452441444",appId:"1:880452441444:web:94ea9eba104d45d303d671"};
 const FB={on:false,user:null,fs:null,auth:null,dmSub:null,ready:false};
 function fbInit(){ try{ if(window.claude||!window.firebase) return null; firebase.initializeApp(FB_CONFIG); FB.fs=firebase.firestore(); try{ FB.fs.settings({ignoreUndefinedProperties:true}); }catch(e){} FB.auth=firebase.auth(); FB.on=true; return FB.fs; }catch(e){ console.error("Firebase failed to start",e); return null; } }
+/* ================= Gemini through Firebase AI Logic (free tier) ================= */
+const GEMINI={v:"12.6.0",siteKey:"",models:["gemini-3.8-flash","gemini-3.5-flash","gemini-2.5-flash"],state:"off",why:""};
+function geminiCode(e){ const m=String((e&&(e.message||e.code))||e||"").toLowerCase();
+ if(/app.?check|attestation|app_check/.test(m)) return "appcheck";
+ if(/has not been used|is disabled|not enabled|ai logic|firebasevertexai|firebaseml|service_disabled|api-not-enabled|permission_denied|403/.test(m)) return "not_enabled";
+ if(/quota|429|resource_exhausted|rate/.test(m)) return "rate_limited";
+ if(/safety|blocked|recitation|prohibited/.test(m)) return "refused";
+ if(/not found|404|is not supported|unknown model/.test(m)) return "no_model";
+ if(/failed to fetch|network/.test(m)) return "network";
+ return "upstream_error"; }
+async function geminiInit(){
+ const base=`https://www.gstatic.com/firebasejs/${GEMINI.v}/`;
+ const [appM,aiM,acM]=await Promise.all([import(base+"firebase-app.js"),import(base+"firebase-ai.js"),import(base+"firebase-app-check.js")]);
+ const app=appM.initializeApp(FB_CONFIG,"codex-ai");
+ if(GEMINI.siteKey){ try{ acM.initializeAppCheck(app,{provider:new acM.ReCaptchaV3Provider(GEMINI.siteKey),isTokenAutoRefreshEnabled:true}); }catch(e){ console.warn("App Check",e); } }
+ const ai=aiM.getAI(app,{backend:new aiM.GoogleAIBackend()});
+ let mi=0; const model=()=>aiM.getGenerativeModel(ai,{model:GEMINI.models[mi],generationConfig:{responseMimeType:"application/json",temperature:.9}});
+ const toPart=async blob=>{ let b=blob; try{ if(typeof shrinkImage==="function"){ const r=await shrinkImage(blob,1024,700000); b=dataToBlob(r.data); } }catch(e){}
+  const b64=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]); fr.onerror=rej; fr.readAsDataURL(b); }); return {inlineData:{data:b64,mimeType:b.type||"image/jpeg"}}; };
+ async function gen(parts,signal){ for(;;){ if(signal&&signal.aborted) throw {code:"cancelled"}; try{ const r=await model().generateContent(parts); if(signal&&signal.aborted) throw {code:"cancelled"}; return r.response.text(); }
+   catch(e){ if(e&&e.code==="cancelled") throw e; const c=geminiCode(e); if(c==="no_model"&&mi<GEMINI.models.length-1){ mi++; continue; } throw {code:c,message:String(e&&e.message||e)}; } } }
+ const fn=async(prompt,o)=>({text:await gen([{text:String(prompt)}],o&&o.signal),truncated:false});
+ fn.json=async(prompt,o)=>{ o=o||{}; const parts=[{text:String(prompt)}]; for(const im of [].concat(o.images||[])) parts.push(await toPart(im));
+  const t=await gen(parts,o.signal); try{ return JSON.parse(String(t).replace(/^\s*```(?:json)?/i,"").replace(/```\s*$/,"").trim()); }catch(e){ throw {code:"invalid_json",text:t}; } };
+ fn.limits=async()=>({images:{maxCount:1,maxInputBytes:20e6,mediaTypes:["image/png","image/jpeg","image/webp","image/gif"]}});
+ return fn; }
+function startGemini(){ GEMINI.state="loading"; geminiInit().then(s=>{ CAP.sample=s; CAP.img={maxCount:1,maxInputBytes:20e6,mediaTypes:["image/png","image/jpeg","image/webp","image/gif"]}; GEMINI.state="on"; render(); })
+ .catch(e=>{ GEMINI.state="off"; GEMINI.why=String(e&&e.message||e); console.warn("AI unavailable",e); render(); }); }
+
 function localDl(){ return {save:async({filename,data})=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(data); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }}; }
 function fbWatch(){ FB.auth.onAuthStateChanged(async u=>{ FB.user=u; FB.ready=true; let dm=false;
   if(u){ try{ await FB.fs.collection("dm").doc("_check").get(); dm=true; }catch(e){ dm=false; } }
@@ -784,7 +813,7 @@ let mapSaveTimer=null;
 function roleSwitch(){ const el=$("#roleSw"); if(!el) return;
  el.innerHTML=CAP.canDm?`<button data-act="role" data-v="dm" class="${isDM()?"on":""}" aria-pressed="${isDM()}">DM</button><button data-act="role" data-v="player" class="${!isDM()?"on":""}" aria-pressed="${!isDM()}">Player</button>`:`<button class="on" disabled>Player</button>`; }
 async function initCaps(){
- const C=window.claude; if(FB.on){ CAP.canDm=false; ui.role="player"; CAP.dl=localDl(); fbWatch(); render(true); return; } if(!C||!C.use) CAP.dl=localDl();
+ const C=window.claude; if(FB.on){ CAP.canDm=false; ui.role="player"; CAP.dl=localDl(); fbWatch(); startGemini(); render(true); return; } if(!C||!C.use) CAP.dl=localDl();
  if(C&&C.use){
   try{ const u=await C.use("user"); CAP.canDm=u?await u.isOwner():false; }catch(e){ CAP.canDm=false; }
   if(!CAP.canDm) ui.role="player";
@@ -805,8 +834,8 @@ const HIDE_CODES=["not_granted","sampling_disabled","not_declared","capability_d
 function aiErr(e){ const c=e&&e.code;
  return ({cancelled:"",rate_limited:"Claude is busy or you've hit your usage limit. Try again in a bit.",image_rejected:"That picture couldn't be used. Try a JPG or PNG that isn't huge.",
   images_unavailable:"Pictures can't be sent from this view. Try again without one.",refused:"Claude declined that request. Try describing it differently.",invalid_json:"The draft came back garbled. Try again.",
-  session_expired:"Sign in to Claude again to use AI.",not_granted:"AI wasn't allowed for this page, so the AI buttons are hidden for now.",prompt_too_large:"That's too much text. Shorten the description."})[c]??"Something went wrong. Try again."; }
-function aiUnavailable(what){ return emptyBox(`${what} needs Claude`,"Open this page on claude.ai or in the Claude app and allow it to use Claude. Everything else on the page works without it.",null,""); }
+  session_expired:"Sign in to Claude again to use AI.",not_granted:"AI wasn't allowed for this page, so the AI buttons are hidden for now.",not_enabled:"AI isn't switched on for this site yet. The DM needs to turn on Gemini in Firebase: AI Services → AI Logic → Get started → Gemini Developer API.",appcheck:"Firebase blocked the AI request with App Check. The DM can fix it in Firebase: Security → App Check → APIs → Firebase AI Logic.",no_model:"The AI model isn't available right now. Try again later.",network:"Couldn't reach the AI. Check your internet connection.",prompt_too_large:"That's too much text. Shorten the description."})[c]??"Something went wrong. Try again."; }
+function aiUnavailable(what){ if(FB.on) return emptyBox(GEMINI.state==="loading"?"Starting the AI…":`${what} isn't available right now`,GEMINI.state==="loading"?"One moment.":"The AI didn't start. Refresh the page, or ask the DM to check AI Logic in Firebase.",null,""); return emptyBox(`${what} needs Claude`,"Open this page on claude.ai or in the Claude app and allow it to use Claude. Everything else on the page works without it.",null,""); }
 const str=(x,n)=>String(x==null?"":x).slice(0,n||600);
 const arr=(a,f,n)=>Array.isArray(a)?a.slice(0,n||12).map(f).filter(Boolean):[];
 function cleanChar(r){ r=r||{};
