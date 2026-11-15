@@ -315,12 +315,41 @@ body.player .dm-only{display:none!important}
     <a href="#tools" data-v="tools">Dice &amp; rules</a>
     <a href="#news" data-v="news">D&amp;D news</a>
   </nav>
+  <span id="authBox"></span>
   <div class="role" id="roleSw" role="group" aria-label="Mode"></div>
   <span class="save-pill" id="savePill">Connecting…</span>
 </div></header>
 <main id="app"></main>
 <div class="toast" id="toast" hidden></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ================= Firebase (shared saving on the GitHub site) ================= */
+const FB_CONFIG={apiKey:"AIzaSyCpC23kJbmrXdpUGy8TQL71X0K--_YYQEY",authDomain:"party-codex-fd673.firebaseapp.com",projectId:"party-codex-fd673",storageBucket:"party-codex-fd673.firebasestorage.app",messagingSenderId:"880452441444",appId:"1:880452441444:web:94ea9eba104d45d303d671"};
+const FB={on:false,user:null,fs:null,auth:null,dmSub:null,ready:false};
+function fbInit(){ try{ if(window.claude||!window.firebase) return null; firebase.initializeApp(FB_CONFIG); FB.fs=firebase.firestore(); try{ FB.fs.settings({ignoreUndefinedProperties:true}); }catch(e){} FB.auth=firebase.auth(); FB.on=true; return FB.fs; }catch(e){ console.error("Firebase failed to start",e); return null; } }
+function localDl(){ return {save:async({filename,data})=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(data); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }}; }
+function fbWatch(){ FB.auth.onAuthStateChanged(async u=>{ FB.user=u; FB.ready=true; let dm=false;
+  if(u){ try{ await FB.fs.collection("dm").doc("_check").get(); dm=true; }catch(e){ dm=false; } }
+  CAP.canDm=dm; ui.role=dm?((LS.get("codex2:role")==="player")?"player":"dm"):"player";
+  if(dm&&!FB.dmSub){ FB.dmSub=FB.fs.collection("dm").onSnapshot(s=>{ const m={}; s.docs.forEach(d=>m[d.id]=d.data()); S.data.dm=m; render(); },()=>{}); }
+  if(!dm&&FB.dmSub){ FB.dmSub(); FB.dmSub=null; S.data.dm={}; }
+  CAP.readOnly=false; render(true); }); }
+function authBox(){ const ab=document.getElementById("authBox"); if(!ab) return; if(!FB.on){ ab.innerHTML=""; return; }
+  ab.innerHTML=!FB.ready?"":FB.user?`<button class="btn small" data-act="fb-out" title="Signed in as ${esc(FB.user.email||"")}">Sign out</button>`:`<button class="btn small primary" data-act="fb-in">Sign in with Google</button>`; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b||!FB.on) return; const act=b.dataset.act;
+  if(act==="fb-in"){ FB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err=>{ if(err&&err.code!=="auth/popup-closed-by-user"&&err.code!=="auth/cancelled-popup-request") toast(err&&err.code==="auth/unauthorized-domain"?"Sign-in isn't allowed on this site yet. In Firebase → Authentication → Settings → Authorized domains, add this site's address.":"Couldn't sign in: "+((err&&err.message)||"unknown error")); }); }
+  if(act==="fb-out"){ FB.auth.signOut(); toast("Signed out"); }
+  if(act==="fb-import"){ fbImport(b); } });
+async function fbImport(b){ if(!isDM()) return; b.disabled=true; b.textContent="Importing…";
+  try{ const r=await fetch("seed.json",{cache:"no-store"}); const seed=await r.json(); let n=0;
+   for(const [col,docs] of Object.entries(seed)){ for(const [id,doc] of Object.entries(docs)){ if(S.data[col]&&S.data[col][id]) continue; await FB.fs.collection(col).doc(id).set(doc); n++; } }
+   toast(n?`Imported ${n} items from the claude.ai codex`:"Everything from the backup is already here"); }
+  catch(e){ toast("Import failed: "+((e&&e.message)||"unknown error")); }
+  b.disabled=false; b.textContent="Import characters from the claude.ai codex"; }
+</script>
 <script>
 /* ================= helpers ================= */
 const $=s=>document.querySelector(s);
@@ -347,7 +376,7 @@ const newWorld=()=>({name:"",tag:"",blurb:"",sections:[],npcs:[],createdAt:Date.
 /* ================= store ================= */
 const COLS=["characters","trees","worlds","settings","maps","mats","shops"];
 const S={mode:"loading",db:null,data:{characters:{},trees:{},worlds:{},settings:{},maps:{},mats:{},dm:{},tokens:{},shops:{}},note:""};
-function writeFail(e){ if(e&&e.code==="invalid_argument"&&S.db){ if(typeof CAP!=="undefined") CAP.readOnly=true; toast("You can't change that with your access. Ask the DM to invite you by email with edit access."); setTimeout(()=>render(true),0); } else toast("Couldn't save: "+((e&&e.message)||"unknown error")); }
+function writeFail(e){ if(FB.on&&e&&e.code==="permission-denied"){ toast(FB.user?"Only the DM can change that.":"Sign in with Google (top right) to make changes."); return; } if(e&&e.code==="invalid_argument"&&S.db){ if(typeof CAP!=="undefined") CAP.readOnly=true; toast("You can't change that with your access. Ask the DM to invite you by email with edit access."); setTimeout(()=>render(true),0); } else toast("Couldn't save: "+((e&&e.message)||"unknown error")); }
 const chain={};
 function put(col,id,doc,quiet){ doc.updatedAt=Date.now(); S.data[col]=Object.assign({},S.data[col],{[id]:doc});
  if(S.db){ const k=col+"/"+id; chain[k]=(chain[k]||Promise.resolve()).then(()=>S.db.collection(col).doc(id).set(doc)).catch(writeFail); }
@@ -369,7 +398,7 @@ function costOf(n){ if(n.cost!==""&&n.cost!=null&&!isNaN(n.cost)) return Number(
  const base=r.replace(/[+\-]+$/,""); hit=tb.find(x=>String(x.rank).trim().toLowerCase()===base); return hit?num(hit.cost):0; }
 
 async function initDb(){
- let db=null; try{ db=window.claude&&window.claude.use?await window.claude.use("db"):null; }catch(e){ db=null; }
+ let db=null; try{ db=window.claude&&window.claude.use?await window.claude.use("db"):null; }catch(e){ db=null; } if(!db) db=fbInit();
  if(!db){ S.mode="local"; COLS.forEach(c=>S.data[c]=LS.get("codex2:"+c)||{}); render(true); return; }
  S.db=db; S.mode="live";
  const seen=new Set(); const timer=setTimeout(()=>{ if(seen.size<COLS.length){ S.note="Your party's data can't be reached yet. Anything you add will save once it connects."; render(); } },10000);
@@ -414,6 +443,7 @@ function viewHome(){
   <p class="lede">A blank book for your campaigns. Write up characters, build skill trees one skill at a time, and keep each world's lore and NPCs together. Everything you add saves for the whole party.</p>
   <div class="actions"><button class="btn primary" data-act="new-char">New character</button><a class="btn" href="#ai-char">Create with AI</a><button class="btn dm-only" data-act="new-tree">New skill tree</button><button class="btn dm-only" data-act="new-world">New world</button><button class="btn dm-only" data-act="new-map">New map</button><a class="btn" href="#playmat">Play mat</a><a class="btn" href="#shops">Shops</a></div>
   <p class="meta">${isDM()?"DM mode: you can build trees, worlds and maps and see DM notes. Switch to Player at the top to see what your table sees.":"Player mode: you can edit characters, spend skill points, move tokens on the play mat and buy from shops. Trees, worlds, maps and DM notes are the DM's."}</p>
+  ${FB.on&&isDM()?`<div><button class="btn" data-act="fb-import">Import characters from the claude.ai codex</button></div>`:""}${FB.on&&FB.ready&&!FB.user?`<p class="meta">Sign in with Google at the top right to edit characters, move tokens and shop.</p>`:""}
   <div class="counts"><span><b>${C.length}</b>characters</span><span><b>${T.length}</b>skill trees</span><span><b>${Wd.length}</b>worlds</span><span><b>${maps().length}</b>maps</span></div></section>
  ${loading()?`<p class="muted">Opening the codex…</p>`:`
  <section class="section"><div class="section-head"><h2>Recent characters</h2><a href="#characters">All characters</a></div>
@@ -727,7 +757,7 @@ let mapSaveTimer=null;
 function roleSwitch(){ const el=$("#roleSw"); if(!el) return;
  el.innerHTML=CAP.canDm?`<button data-act="role" data-v="dm" class="${isDM()?"on":""}" aria-pressed="${isDM()}">DM</button><button data-act="role" data-v="player" class="${!isDM()?"on":""}" aria-pressed="${!isDM()}">Player</button>`:`<button class="on" disabled>Player</button>`; }
 async function initCaps(){
- const C=window.claude;
+ const C=window.claude; if(FB.on){ CAP.canDm=false; ui.role="player"; CAP.dl=localDl(); fbWatch(); render(true); return; } if(!C||!C.use) CAP.dl=localDl();
  if(C&&C.use){
   try{ const u=await C.use("user"); CAP.canDm=u?await u.isOwner():false; }catch(e){ CAP.canDm=false; }
   if(!CAP.canDm) ui.role="player";
@@ -1396,7 +1426,7 @@ function render(force){
  $("#app").innerHTML=html;
  $$("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.v===nav));
  const pill=$("#savePill"); pill.textContent=S.mode==="live"?"Saved for the party":S.mode==="local"?"Saved in this browser":"Connecting…"; pill.classList.toggle("live",S.mode==="live");
- document.body.classList.toggle("player",!isDM()); roleSwitch(); redrawCanvases();
+ document.body.classList.toggle("player",!isDM()); roleSwitch(); authBox(); redrawCanvases();
  const f2=document.querySelector(".canvas-frame"); if(f2&&f2.id===fid){ f2.scrollLeft=sx; f2.scrollTop=stp; }
  if(force==="keep") window.scrollTo(0,sy);
 }
