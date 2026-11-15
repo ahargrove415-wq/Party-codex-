@@ -342,7 +342,13 @@ function authBox(){ const ab=document.getElementById("authBox"); if(!ab) return;
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b||!FB.on) return; const act=b.dataset.act;
   if(act==="fb-in"){ FB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err=>{ if(err&&err.code!=="auth/popup-closed-by-user"&&err.code!=="auth/cancelled-popup-request") toast(err&&err.code==="auth/unauthorized-domain"?"Sign-in isn't allowed on this site yet. In Firebase → Authentication → Settings → Authorized domains, add this site's address.":"Couldn't sign in: "+((err&&err.message)||"unknown error")); }); }
   if(act==="fb-out"){ FB.auth.signOut(); toast("Signed out"); }
-  if(act==="fb-import"){ fbImport(b); } });
+  if(act==="fb-import"){ fbImport(b); }
+  if(act==="fb-local"){ fbUploadLocal(b); } });
+function localSaved(){ const out={}; const cols=isDM()?["characters","trees","worlds","maps","shops","mats","settings"]:["characters"];
+  cols.forEach(c=>{ const m=LS.get("codex2:"+c)||{}; const ids=Object.keys(m).filter(id=>!(S.data[c]&&S.data[c][id])); if(ids.length) out[c]=ids.map(id=>[id,m[id]]); }); return out; }
+async function fbUploadLocal(b){ const L=localSaved(); b.disabled=true; b.textContent="Uploading…"; let n=0, fail=0;
+  for(const [col,rows] of Object.entries(L)){ for(const [id,doc] of rows){ try{ await FB.fs.collection(col).doc(id).set(doc); n++; }catch(e){ fail++; } } }
+  toast(fail?`Uploaded ${n}; ${fail} couldn't be saved with your access`:`Uploaded ${n} from this browser`); b.disabled=false; render(true); }
 async function fbImport(b){ if(!isDM()) return; b.disabled=true; b.textContent="Importing…";
   try{ const r=await fetch("seed.json",{cache:"no-store"}); const seed=await r.json(); let n=0;
    for(const [col,docs] of Object.entries(seed)){ for(const [id,doc] of Object.entries(docs)){ if(S.data[col]&&S.data[col][id]) continue; await FB.fs.collection(col).doc(id).set(doc); n++; } }
@@ -443,7 +449,7 @@ function viewHome(){
   <p class="lede">A blank book for your campaigns. Write up characters, build skill trees one skill at a time, and keep each world's lore and NPCs together. Everything you add saves for the whole party.</p>
   <div class="actions"><button class="btn primary" data-act="new-char">New character</button><a class="btn" href="#ai-char">Create with AI</a><button class="btn dm-only" data-act="new-tree">New skill tree</button><button class="btn dm-only" data-act="new-world">New world</button><button class="btn dm-only" data-act="new-map">New map</button><a class="btn" href="#playmat">Play mat</a><a class="btn" href="#shops">Shops</a></div>
   <p class="meta">${isDM()?"DM mode: you can build trees, worlds and maps and see DM notes. Switch to Player at the top to see what your table sees.":"Player mode: you can edit characters, spend skill points, move tokens on the play mat and buy from shops. Trees, worlds, maps and DM notes are the DM's."}</p>
-  ${FB.on&&isDM()?`<div><button class="btn" data-act="fb-import">Import characters from the claude.ai codex</button></div>`:""}${FB.on&&FB.ready&&!FB.user?`<p class="meta">Sign in with Google at the top right to edit characters, move tokens and shop.</p>`:""}
+  ${FB.on&&isDM()?`<div><button class="btn" data-act="fb-import">Import characters from the claude.ai codex</button></div>`:""}${FB.on&&FB.user?(()=>{ const L=localSaved(); const n=Object.values(L).reduce((t,r)=>t+r.length,0); const nc=(L.characters||[]).length; return n?`<div><button class="btn primary" data-act="fb-local">Upload ${n} item${n>1?"s":""} saved in this browser${nc?` (${nc} character${nc>1?"s":""})`:""}</button></div>`:""; })():""}${FB.on&&FB.ready&&!FB.user?`<p class="meta">Sign in with Google at the top right to edit characters, move tokens and shop.</p>`:""}
   <div class="counts"><span><b>${C.length}</b>characters</span><span><b>${T.length}</b>skill trees</span><span><b>${Wd.length}</b>worlds</span><span><b>${maps().length}</b>maps</span></div></section>
  ${loading()?`<p class="muted">Opening the codex…</p>`:`
  <section class="section"><div class="section-head"><h2>Recent characters</h2><a href="#characters">All characters</a></div>
