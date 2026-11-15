@@ -314,6 +314,10 @@ body.player .dm-only{display:none!important}
 .sheet-title{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .lightbox{position:fixed;inset:0;z-index:30;background:rgba(5,7,12,.88);display:grid;place-items:center;align-content:center;gap:10px;padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));cursor:zoom-out;color:#eee;text-align:center}
 .lightbox img{max-width:min(92vw,1100px);max-height:80vh;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+.item-img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block;background:var(--sunk);margin-bottom:4px}
+.item-ph{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+.item-ph select{font-size:.84rem;padding:3px 6px;max-width:100%}
+.shop-item.over{outline:2px dashed var(--brass);outline-offset:2px}
 </style>
 
 <header class="top"><div class="top-in">
@@ -473,7 +477,7 @@ const REPS={
  sections:{cols:[["h","Heading"],["body","Text (start a line with - for a bullet)",1]],grid:"minmax(0,1fr) minmax(0,2.5fr) auto"},
  npcs:{cols:[["name","Name"],["base","Based in"],["seen","First seen"],["top","Top stat"],["bio","Bio",1]],grid:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 6em minmax(0,1.8fr) auto"},
  costs:{cols:[["rank","Rank"],["cost","Cost"]],grid:"minmax(0,1fr) minmax(0,1fr) auto"},
- shopItems:{cols:[["id","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["effect","Effect (optional)"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em minmax(0,.9fr) auto minmax(0,1.5fr) auto"}
+ shopItems:{cols:[["id","","hid"],["photo","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["effect","Effect (optional)"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em minmax(0,.9fr) auto minmax(0,1.5fr) auto"}
 };
 function repRow(name,r){ const R=REPS[name]; r=r||{};
  return `<div class="rep-row" style="grid-template-columns:${R.grid}">${R.cols.map(([k,l,a])=>a==="hid"?`<input type="hidden" data-k="${k}" value="${esc(r[k])}">`:a==="chk"?`<label class="rep-chk"><input type="checkbox" data-k="${k}" ${r[k]&&r[k]!=="0"?"checked":""}> ${esc(l)}</label>`:a?`<textarea data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" rows="1">${esc(r[k])}</textarea>`:`<input type="text" data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" value="${esc(r[k])}">`).join("")}<button type="button" class="rep-del" data-act="rep-del" aria-label="Remove row">✕</button></div>`; }
@@ -1371,10 +1375,10 @@ function viewShop(id){
  const shown=items.filter(it=>ui.shop.cat==="all"||it.cat===ui.shop.cat);
  const closed=s.open===false;
  const card=it=>{ const st=stockOf(it), price=num(it.price), afford=buyer&&purse(s,buyer)>=price, avail=inStock(it);
-  return `<div class="card shop-item ${avail?"":"sold"}"><div class="row" style="justify-content:space-between;align-items:start"><div style="display:grid;gap:2px;min-width:0"><h3>${esc(it.name||"Unnamed item")}</h3><span class="meta">${esc(it.cat||"")}</span></div>${rarChip(it.rarity)}</div>
+  const ph=photo(it.photo); return `<div class="card shop-item ${avail?"":"sold"}" ${dm?`data-ctx="item:${id}:${it.i}"`:""}>${ph?`<button class="ph-img" data-act="ph-view" data-id="${it.photo}" aria-label="View larger"><img class="item-img" src="${ph.data}" alt="${esc(it.name||"Item")}" loading="lazy"></button>`:""}<div class="row" style="justify-content:space-between;align-items:start"><div style="display:grid;gap:2px;min-width:0"><h3>${esc(it.name||"Unnamed item")}</h3><span class="meta">${esc(it.cat||"")}</span></div>${rarChip(it.rarity)}</div>
   ${it.desc?`<p class="muted" style="font-size:.94rem">${esc(it.desc)}</p>`:""}${fxText(it.effect)?`<p class="meta" style="color:var(--arcane)">Instant: ${esc(fxText(it.effect))}</p>`:""}
   <div class="row" style="justify-content:space-between;margin-top:auto"><span class="price mono">${fmt(price)} <small>${esc(cur)}</small></span><span class="meta">${st===""?"In stock":num(st)>0?`${fmt(num(st))} left`:"Sold out"}${it.hidden?" · hidden":""}</span></div>
-  <div class="actions">${closed&&!dm?"":`<button class="btn small primary" data-act="buy" data-id="${id}" data-i="${it.i}" ${!buyer||!avail||!afford||closed?"disabled":""}>${!avail?"Sold out":!buyer?"Pick a buyer":!afford?"Can't afford":"Buy"}</button>`}${dm&&buyer?`<button class="btn small" data-act="give" data-id="${id}" data-i="${it.i}" ${avail?"":"disabled"}>Give free</button>`:""}</div></div>`; };
+  <div class="actions">${closed&&!dm?"":`<button class="btn small primary" data-act="buy" data-id="${id}" data-i="${it.i}" ${!buyer||!avail||!afford||closed?"disabled":""}>${!avail?"Sold out":!buyer?"Pick a buyer":!afford?"Can't afford":"Buy"}</button>`}${dm?`<span class="item-ph"><label class="btn small">${ph?"Change photo":"Add photo"}<input type="file" accept="image/*" hidden data-upload="item:${id}:${it.i}"></label><button class="btn small ${ui.shop.pasteTo===id+":"+it.i?"primary":""}" data-act="item-paste" data-v="${id}:${it.i}">${ui.shop.pasteTo===id+":"+it.i?"Press Ctrl+V / ⌘V now":"Paste photo"}</button>${photos().length?`<select class="it-photo" data-v="${id}:${it.i}" aria-label="Pick a photo"><option value="">From Photos…</option>${photos().map(p=>`<option value="${p.id}" ${it.photo===p.id?"selected":""}>${esc(p.caption||"Untitled photo")}</option>`).join("")}</select>`:""}</span>`:""}${dm&&buyer?`<button class="btn small" data-act="give" data-id="${id}" data-i="${it.i}" ${avail?"":"disabled"}>Give free</button>`:""}</div></div>`; };
  return `<a href="#shops" class="muted">← All shops</a>
  <section class="sheet-head"><span class="eyebrow">${esc(s.campaign||"Shop")}${s.keeper?" · run by "+esc(s.keeper):""}</span>
   <div class="row" style="justify-content:space-between"><h1>${esc(s.name||"Untitled shop")}</h1><div class="actions"><span class="tag" style="${closed?"color:var(--danger)":"color:var(--arcane)"}">${closed?"Closed":"Open"}</span>${dm?`<button class="btn" data-act="shop-open" data-id="${id}">${closed?"Open shop":"Close shop"}</button><a class="btn" href="#edit-shop-${id}">Edit shop &amp; stock</a>`:""}</div></div>
@@ -1413,7 +1417,7 @@ function editShop(id){
 }
 function readShopForm(id){ const s=getS(id); if(!s) return null;
  Object.assign(s,{name:v("s-name"),keeper:v("s-keeper"),campaign:v("s-camp"),currency:v("s-cur")||"gold",blurb:v("s-blurb"),open:$("#s-open").checked,
-  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
+  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",photo:it.photo||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
 async function shopAi(id){ const A=ui.shop.ai; if(A.busy) return; const s=readShopForm(id); if(!s) return;
  const world=worlds().find(w=>w.name&&w.name===s.campaign); const money=chars().map(c=>num(c.money)).filter(Boolean);
  const prompt=`Stock a shop in a homebrew tabletop RPG.
@@ -1584,7 +1588,8 @@ async function attachAiPortrait(cid){ const A=ui.ai; try{
   if(A.photoId&&photo(A.photoId)){ const c=getC(cid); c.portrait=A.photoId; put("characters",cid,c,true); const p=clone(S.data.photos[A.photoId]); if(!p.charId){ p.charId=cid; put("photos",A.photoId,p,true); } }
   else if(A.file){ await addPhotos([A.file],{charId:cid,portrait:true}); } }catch(e){} A.photoId=""; }
 function openLightbox(d,cap){ const o=document.createElement("div"); o.className="lightbox"; o.setAttribute("role","dialog"); o.innerHTML=`<img src="${d}" alt="${esc(cap||"Photo")}"><p>${esc(cap||"")}</p><span class="meta">Click anywhere to close</span>`; o.addEventListener("click",()=>o.remove()); document.body.appendChild(o); }
-function handleUpload(ctx,files){ if(!files||!files.length) return; const [kind,id]=String(ctx).split(":");
+async function setItemPhoto(ref,files,pid){ const [sid,i]=String(ref).split(":"); let id=pid; if(!id){ const ids=await addPhotos(files); id=ids[0]; } if(!id) return; const s=getS(sid); if(!s||!s.items[+i]) return; s.items[+i].photo=id; ui.shop.pasteTo=""; put("shops",sid,s,true); toast("Item photo set"); render("keep"); }
+function handleUpload(ctx,files){ if(!files||!files.length) return; if(String(ctx).startsWith("item:")){ setItemPhoto(String(ctx).slice(5),files); return; } const [kind,id]=String(ctx).split(":");
  if(kind==="album") addPhotos(files); else if(kind==="char") addPhotos(files,{charId:id}); else if(kind==="portrait") addPhotos(files,{charId:id,portrait:true}); }
 document.addEventListener("change",e=>{ const t=e.target;
  if(t.dataset&&t.dataset.upload){ handleUpload(t.dataset.upload,t.files); t.value=""; return; }
@@ -1600,15 +1605,19 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  if(act==="ph-unset"){ const c=getC(b.dataset.c); if(c){ c.portrait=""; put("characters",b.dataset.c,c,true); render("keep"); } return; }
  if(act==="ph-del"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again"; return; } del("photos",id); chars().filter(c=>c.portrait===id).forEach(c=>{ const cc=getC(c.id); cc.portrait=""; put("characters",c.id,cc,true); }); toast("Photo deleted"); render("keep"); return; }
 });
-document.addEventListener("dragover",e=>{ const z=e.target.closest&&e.target.closest(".dropzone"); if(!z) return; e.preventDefault(); z.classList.add("over"); });
-document.addEventListener("dragleave",e=>{ const z=e.target.closest&&e.target.closest(".dropzone"); if(z) z.classList.remove("over"); });
-document.addEventListener("drop",e=>{ const z=e.target.closest&&e.target.closest(".dropzone"); if(!z) return; e.preventDefault(); z.classList.remove("over"); handleUpload(z.dataset.ctx,e.dataTransfer&&e.dataTransfer.files); });
+document.addEventListener("dragover",e=>{ const z=e.target.closest&&e.target.closest(".dropzone,.shop-item[data-ctx]"); if(!z) return; e.preventDefault(); z.classList.add("over"); });
+document.addEventListener("dragleave",e=>{ const z=e.target.closest&&e.target.closest(".dropzone,.shop-item[data-ctx]"); if(z) z.classList.remove("over"); });
+document.addEventListener("drop",e=>{ const z=e.target.closest&&e.target.closest(".dropzone,.shop-item[data-ctx]"); if(!z) return; e.preventDefault(); z.classList.remove("over"); handleUpload(z.dataset.ctx,e.dataTransfer&&e.dataTransfer.files); });
 document.addEventListener("paste",e=>{ const files=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>/^image\//.test(f.type)); if(!files.length) return;
  const h=location.hash.slice(1); let m;
  if(h==="photos"){ e.preventDefault(); addPhotos(files); }
  else if(h==="ai-char"){ e.preventDefault(); ui.ai.file=files[0]; ui.ai.imgUrl=URL.createObjectURL(files[0]); ui.ai.photoId=""; render(true); toast("Picture added. Describe them or just click Create."); }
  else if((m=h.match(/^char-(\w+)$/))){ e.preventDefault(); addPhotos(files,{charId:m[1]}); }
- else if((m=h.match(/^edit-char-(\w+)$/))){ e.preventDefault(); addPhotos(files,{charId:m[1],portrait:true}); } });
+ else if((m=h.match(/^edit-char-(\w+)$/))){ e.preventDefault(); addPhotos(files,{charId:m[1],portrait:true}); }
+ else if(/^shop-/.test(h)&&ui.shop.pasteTo){ e.preventDefault(); setItemPhoto(ui.shop.pasteTo,files); }
+ else if(/^shop-/.test(h)&&isDM()){ toast("Click Paste photo on the item first, then paste."); } });
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act=\"item-paste\"]"); if(!b) return; ui.shop.pasteTo=ui.shop.pasteTo===b.dataset.v?"":b.dataset.v; render("keep"); });
+document.addEventListener("change",e=>{ const t=e.target; if(t.classList&&t.classList.contains("it-photo")&&t.value) setItemPhoto(t.dataset.v,null,t.value); });
 
 /* ================= render & routing ================= */
 function render(force){
