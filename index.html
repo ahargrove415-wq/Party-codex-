@@ -321,6 +321,13 @@ body.player .dm-only{display:none!important}
 .mission h3{font-size:1.05rem}
 .rank-big .rk{font-size:.95rem;padding:4px 9px;min-width:2.6em}
 .reward{font-size:.94rem;color:var(--arcane);margin:0}
+.buff-chip{font-size:.84rem;padding:3px 10px;border-radius:99px;background:var(--arcane-soft);color:var(--arcane);border:1px solid color-mix(in srgb,var(--arcane) 40%,transparent);font-family:var(--f-mono)}
+.buff-chip.neg{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+.bonus{font-size:.74rem;color:var(--arcane);font-family:var(--f-mono)}
+.bonus.neg{color:var(--danger)}
+.bf-add{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 5.5em auto;gap:6px}
+.bf-add input{min-width:0;width:100%}
+@media (max-width:640px){.bf-add{grid-template-columns:minmax(0,1fr) 5em}.bf-add #bf-eff{grid-column:1/-1}}
 </style>
 
 <header class="top"><div class="top-in">
@@ -476,11 +483,11 @@ const REPS={
  stats:{cols:[["k","Stat"],["v","Value"]],grid:"minmax(0,1fr) minmax(0,1fr) auto"},
  skills:{cols:[["rank","Rank"],["name","Skill name"],["desc","What it does",1]],grid:"6.5em minmax(0,1fr) minmax(0,1.6fr) auto"},
  moves:{cols:[["name","Move or spell"],["cost","Cost"],["dmg","Damage"],["desc","What it does",1]],grid:"minmax(0,1fr) 8em 8em minmax(0,1.5fr) auto"},
- items:{cols:[["name","Item"],["desc","What it does",1]],grid:"minmax(0,1fr) minmax(0,2fr) auto"},
+ items:{cols:[["name","Item"],["desc","What it does",1],["buff","Buff, e.g. Defense+200"],["equipped","Equipped","chk"]],grid:"minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr) auto auto"},
  sections:{cols:[["h","Heading"],["body","Text (start a line with - for a bullet)",1]],grid:"minmax(0,1fr) minmax(0,2.5fr) auto"},
  npcs:{cols:[["name","Name"],["base","Based in"],["seen","First seen"],["top","Top stat"],["bio","Bio",1]],grid:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 6em minmax(0,1.8fr) auto"},
  costs:{cols:[["rank","Rank"],["cost","Cost"]],grid:"minmax(0,1fr) minmax(0,1fr) auto"},
- shopItems:{cols:[["id","","hid"],["photo","","hid"],["takers","","hid"],["done","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["effect","Effect (optional)"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em minmax(0,.9fr) auto minmax(0,1.5fr) auto"}
+ shopItems:{cols:[["id","","hid"],["photo","","hid"],["takers","","hid"],["done","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["effect","Effect (optional)"],["buff","Buff when equipped"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em minmax(0,.9fr) minmax(0,.9fr) auto minmax(0,1.4fr) auto"}
 };
 function repRow(name,r){ const R=REPS[name]; r=r||{};
  return `<div class="rep-row" style="grid-template-columns:${R.grid}">${R.cols.map(([k,l,a])=>a==="hid"?`<input type="hidden" data-k="${k}" value="${esc(r[k])}">`:a==="chk"?`<label class="rep-chk"><input type="checkbox" data-k="${k}" ${r[k]&&r[k]!=="0"?"checked":""}> ${esc(l)}</label>`:a?`<textarea data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" rows="1">${esc(r[k])}</textarea>`:`<input type="text" data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" value="${esc(r[k])}">`).join("")}<button type="button" class="rep-del" data-act="rep-del" aria-label="Remove row">✕</button></div>`; }
@@ -535,15 +542,15 @@ function viewChar(id){
  const list=(arr,fn)=>`<div class="list">${arr.map(fn).join("")}</div>`;
  const skillRow=s=>`<div class="li">${chip(s.rank||"—")}<span class="nm">${esc(s.name)}</span>${s.desc?`<span class="ds">${esc(s.desc)}</span>`:""}</div>`;
  const moveRow=m=>`<div class="li nochip"><span class="nm">${esc(m.name)}</span>${m.desc?`<span class="ds">${esc(m.desc)}</span>`:""}${(m.cost||m.dmg)?`<span class="nums">${m.cost?"Cost "+esc(m.cost):""}${m.cost&&m.dmg?" · ":""}${m.dmg?"Dmg "+esc(m.dmg):""}</span>`:""}</div>`;
- const itemRow=i=>`<div class="li nochip"><span class="nm">${esc(i.name)}</span>${i.desc?`<span class="ds">${esc(i.desc)}</span>`:""}</div>`;
+ const itemRow=i=>`<div class="li nochip"><span class="nm">${esc(i.name)}${truthy(i.equipped)?` <span class="tag">Equipped</span>`:""}</span>${i.desc?`<span class="ds">${esc(i.desc)}</span>`:""}${i.buff?`<span class="nums">${esc(buffText(i.buff))}</span>`:""}</div>`;
  const stats=(c.stats||[]).filter(s=>s.k||s.v);
  const used=trees().filter(t=>(c.unlocked||{})[t.id]&&c.unlocked[t.id].length);
  const W=worlds().find(w=>w.name&&w.name===c.campaign);
  const nothing=!stats.length&&!(c.skills||[]).length&&!(c.moves||[]).length&&!(c.items||[]).length&&!c.bio;
  const tracker=`<aside class="tracker" aria-label="Session tracker">
   <div class="row" style="justify-content:space-between"><span class="eyebrow">Session tracker</span></div>
-  ${c.hpMax?`${meter("hp","HP",c.hpCur,c.hpMax)}<div class="adj"><input type="number" id="hpAmt" placeholder="Amount" aria-label="HP amount"><button class="btn small" data-act="hp-" data-c="${id}">Damage</button><button class="btn small" data-act="hp+" data-c="${id}">Heal</button></div>`:`<p class="meta">Set max HP in Edit to track damage.</p>`}
-  ${c.enMax?`${meter("mp",c.enLabel||"MP",c.enCur,c.enMax)}<div class="adj"><input type="number" id="enAmt" placeholder="Amount" aria-label="${esc(c.enLabel||"MP")} amount"><button class="btn small" data-act="en-" data-c="${id}">Spend</button><button class="btn small" data-act="en+" data-c="${id}">Restore</button></div>`:""}
+  ${c.hpMax?`${meter("hp","HP",c.hpCur,effMax(c,"hp"))}<div class="adj"><input type="number" id="hpAmt" placeholder="Amount" aria-label="HP amount"><button class="btn small" data-act="hp-" data-c="${id}">Damage</button><button class="btn small" data-act="hp+" data-c="${id}">Heal</button></div>`:`<p class="meta">Set max HP in Edit to track damage.</p>`}
+  ${c.enMax?`${meter("mp",c.enLabel||"MP",c.enCur,effMax(c,"en"))}<div class="adj"><input type="number" id="enAmt" placeholder="Amount" aria-label="${esc(c.enLabel||"MP")} amount"><button class="btn small" data-act="en-" data-c="${id}">Spend</button><button class="btn small" data-act="en+" data-c="${id}">Restore</button></div>`:""}
   ${(c.hpMax||c.enMax)?`<button class="btn small" data-act="rest" data-c="${id}">Full rest</button>`:""}
   <hr style="border:0;border-top:1px solid var(--line);margin:0">
   <div class="row" style="justify-content:space-between"><span><span class="eyebrow">Level</span> <span class="mono" style="font-size:1.3rem">${fmt(c.level)}</span>${c.levelCap?`<span class="muted mono"> / ${esc(c.levelCap)}</span>`:""}</span><span class="muted" style="font-size:.84rem">+${fmt(c.gainSp)} skill · +${fmt(c.gainStat)} stat per level</span></div>
@@ -563,8 +570,9 @@ function viewChar(id){
   ${c.bio?`<p class="lede">${esc(c.bio)}</p>`:""}</section>
  <div class="sheet"><div class="section" style="min-width:0">
   ${nothing?emptyBox("This sheet is blank","Add stats, skills, moves and items to fill it in.",null,"")+`<div><a class="btn primary" href="#edit-char-${id}">Fill in the sheet</a></div>`:""}
-  ${stats.length?`<div class="stats">${stats.map(s=>`<div class="stat"><span class="k">${esc(s.k)}</span><span class="v">${esc(s.v||"—")}</span></div>`).join("")}</div>`:""}
+  ${stats.length?`<div class="stats">${stats.map(s=>`<div class="stat"><span class="k">${esc(s.k)}</span><span class="v">${statCell(c,s)}</span></div>`).join("")}</div>`:""}
   ${(c.tags||[]).length?`<div class="row">${c.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
+  ${buffBox(id,c)}
   ${(c.skills||[]).length?`<div class="section"><div class="section-head"><h2>Skills</h2><span class="muted">${c.skills.length}</span></div>${list(c.skills,skillRow)}</div>`:""}
   ${(c.moves||[]).length?`<div class="section"><div class="section-head"><h2>Moves &amp; spells</h2><span class="muted">${c.moves.length}</span></div>${list(c.moves,moveRow)}</div>`:""}
   ${(c.items||[]).length?`<div class="section"><div class="section-head"><h2>Items</h2></div>${list(c.items,itemRow)}</div>`:""}
@@ -1379,7 +1387,7 @@ function viewShop(id){
  const closed=s.open===false;
  const card=it=>{ const st=stockOf(it), price=num(it.price), afford=buyer&&purse(s,buyer)>=price, avail=inStock(it);
   const ph=photo(it.photo); return `<div class="card shop-item ${avail?"":"sold"}" ${dm?`data-ctx="item:${id}:${it.i}"`:""}>${ph?`<button class="ph-img" data-act="ph-view" data-id="${it.photo}" aria-label="View larger"><img class="item-img" src="${ph.data}" alt="${esc(it.name||"Item")}" loading="lazy"></button>`:""}<div class="row" style="justify-content:space-between;align-items:start"><div style="display:grid;gap:2px;min-width:0"><h3>${esc(it.name||"Unnamed item")}</h3><span class="meta">${esc(it.cat||"")}</span></div>${rarChip(it.rarity)}</div>
-  ${it.desc?`<p class="muted" style="font-size:.94rem">${esc(it.desc)}</p>`:""}${fxText(it.effect)?`<p class="meta" style="color:var(--arcane)">Instant: ${esc(fxText(it.effect))}</p>`:""}
+  ${it.desc?`<p class="muted" style="font-size:.94rem">${esc(it.desc)}</p>`:""}${fxText(it.effect)?`<p class="meta" style="color:var(--arcane)">Instant: ${esc(fxText(it.effect))}</p>`:""}${it.buff?`<p class="meta" style="color:var(--arcane)">When equipped: ${esc(buffText(it.buff))}</p>`:""}
   <div class="row" style="justify-content:space-between;margin-top:auto"><span class="price mono">${fmt(price)} <small>${esc(cur)}</small></span><span class="meta">${st===""?"In stock":num(st)>0?`${fmt(num(st))} left`:"Sold out"}${it.hidden?" · hidden":""}</span></div>
   <div class="actions">${closed&&!dm?"":`<button class="btn small primary" data-act="buy" data-id="${id}" data-i="${it.i}" ${!buyer||!avail||!afford||closed?"disabled":""}>${!avail?"Sold out":!buyer?"Pick a buyer":!afford?"Can't afford":"Buy"}</button>`}${dm?`<span class="item-ph"><label class="btn small">${ph?"Change photo":"Add photo"}<input type="file" accept="image/*" hidden data-upload="item:${id}:${it.i}"></label><button class="btn small ${ui.shop.pasteTo===id+":"+it.i?"primary":""}" data-act="item-paste" data-v="${id}:${it.i}">${ui.shop.pasteTo===id+":"+it.i?"Press Ctrl+V / ⌘V now":"Paste photo"}</button>${photos().length?`<select class="it-photo" data-v="${id}:${it.i}" aria-label="Pick a photo"><option value="">From Photos…</option>${photos().map(p=>`<option value="${p.id}" ${it.photo===p.id?"selected":""}>${esc(p.caption||"Untitled photo")}</option>`).join("")}</select>`:""}</span>`:""}${dm&&buyer?`<button class="btn small" data-act="give" data-id="${id}" data-i="${it.i}" ${avail?"":"disabled"}>Give free</button>`:""}</div></div>`; };
  return `<a href="#shops" class="muted">← All shops</a>
@@ -1410,7 +1418,7 @@ function editShop(id){
    <label class="fld"><span>Campaign</span><input type="text" id="s-camp" list="camps" value="${esc(s.campaign)}"></label>${fld("s-cur","Currency",s.currency||"gold","text",{ph:"gold, credits, ryo"})}<label class="fld"><span>Type</span><select id="s-kind"><option value="shop" ${s.kind!=="missions"?"selected":""}>Shop</option><option value="missions" ${s.kind==="missions"?"selected":""}>Mission board</option></select></label>
    ${fld("s-blurb","Description",s.blurb,"area",{wide:1,ph:"What the shop looks like and what it's known for"})}
    <label class="row" style="gap:8px"><input type="checkbox" id="s-open" ${s.open!==false?"checked":""}> Open for business</label></div></div>
-  <div class="fieldset"><h3>${s.kind==="missions"?"Missions":"Stock"}</h3>${s.kind==="missions"?`<p class="edit-hint"><b>For a mission board:</b> Item = mission name, Category = type (Hunt, Escort, Rescue…), Rarity = rank from ??? to F, Price = gold reward, Stock = how many characters can take it (blank = anyone), Effect = extra reward such as <b>exp+300</b> or <b>sp+10</b>.</p>`:""}<p class="edit-hint">Leave Stock blank for unlimited. Effect makes an item apply instantly instead of going to the inventory: write things like <b>level+1</b>, <b>stat+25</b>, <b>sp+10</b>, <b>hpmax+500</b>, <b>mpmax+500</b>, <b>hp+200</b> or <b>money+100</b>. A shop whose currency is "Skill points" charges skill points. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
+  <div class="fieldset"><h3>${s.kind==="missions"?"Missions":"Stock"}</h3>${s.kind==="missions"?`<p class="edit-hint"><b>For a mission board:</b> Item = mission name, Category = type (Hunt, Escort, Rescue…), Rarity = rank from ??? to F, Price = gold reward, Stock = how many characters can take it (blank = anyone), Effect = extra reward such as <b>exp+300</b> or <b>sp+10</b>.</p>`:""}<p class="edit-hint">Leave Stock blank for unlimited. Effect makes an item apply instantly instead of going to the inventory: write things like <b>level+1</b>, <b>stat+25</b>, <b>sp+10</b>, <b>hpmax+500</b>, <b>mpmax+500</b>, <b>hp+200</b> or <b>money+100</b>. A shop whose currency is "Skill points" charges skill points. <b>Buff when equipped</b> (like <b>Defense+800, Speed-50</b>) goes with the item into the buyer's inventory and applies when they equip it. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
   <div class="fieldset"><h3>Stock the shelves with AI</h3>
    ${CAP.sample?`<label class="fld"><span>What should it sell? (optional)</span><input type="text" id="s-aihint" value="${esc(A.hint)}" placeholder="Cheap potions, a few cursed trinkets, one legendary blade"></label>
    <p class="edit-hint">Adds 6 to 10 items that fit the shop and campaign. Prices follow your existing items and characters' money. Review, then Save.</p>
@@ -1420,7 +1428,7 @@ function editShop(id){
 }
 function readShopForm(id){ const s=getS(id); if(!s) return null;
  Object.assign(s,{name:v("s-name"),keeper:v("s-keeper"),campaign:v("s-camp"),currency:v("s-cur")||"gold",kind:(($("#s-kind")||{}).value)||s.kind||"shop",blurb:v("s-blurb"),open:$("#s-open").checked,
-  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",photo:it.photo||"",takers:it.takers||"",done:it.done||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
+  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",buff:it.buff||"",photo:it.photo||"",takers:it.takers||"",done:it.done||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
 async function shopAi(id){ const A=ui.shop.ai; if(A.busy) return; const s=readShopForm(id); if(!s) return;
  const world=worlds().find(w=>w.name&&w.name===s.campaign); const money=chars().map(c=>num(c.money)).filter(Boolean);
  const prompt=`Stock a shop in a homebrew tabletop RPG.
@@ -1453,7 +1461,7 @@ function shopBuy(id,i,free){
  if(!inStock(it)){ toast("Sold out"); return; } if(s.open===false&&!free){ toast("The shop is closed"); return; }
  const price=free?0:num(it.price); if(purse(s,c)<price){ toast("Not enough "+(s.currency||"gold")); return; }
  if(paysSp(s)) c.sp=num(c.sp)-price; else c.money=num(c.money)-price;
- if(!applyFx(c,it.effect)) c.items=(c.items||[]).concat([{name:it.name,desc:[it.rarity,it.desc].filter(Boolean).join(" · ")}]);
+ if(!applyFx(c,it.effect)) c.items=(c.items||[]).concat([{name:it.name,desc:[it.rarity,it.desc].filter(Boolean).join(" · "),buff:it.buff||"",equipped:""}]);
  if(stockOf(it)!=="") it.stock=Math.max(0,num(it.stock)-1);
  s.log=[`${c.name||"Someone"} ${free?"was given":"bought"} ${it.name}${free?"":" for "+fmt(price)+" "+(s.currency||"gold")}`,...(s.log||[])].slice(0,30);
  put("characters",cid,c,true); put("shops",id,s,true); toast(free?`Gave ${it.name} to ${c.name||"them"}`:`Bought ${it.name}`); render("keep"); }
@@ -1671,6 +1679,41 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
    s.log=[`${c.name||"Someone"} completed ${m.name}: ${[num(m.price)?fmt(num(m.price))+" "+(s.currency||"gold"):"",fxText(m.effect)].filter(Boolean).join(", ")||"no reward"}`,...(s.log||[])].slice(0,40); toast(`${c.name||"They"} completed ${m.name}. Reward paid.`); }); return; }
 });
 
+/* ================= buffs & gear ================= */
+const truthy=v=>v===true||v==="1"||v===1||v==="true";
+const BUFF_RE=/([A-Za-z][A-Za-z .'_]*?)\s*([+-])\s*(\d+(?:\.\d+)?)\s*(%)?(?=\s*(?:,|;|$|and\b))/gi;
+function bkey(s){ const k=String(s||"").trim().toLowerCase().replace(/\s+/g," "); if(/^(hp|hpmax|max hp|health|max health)$/.test(k)) return "__hp"; if(/^(mp|mpmax|max mp|energy|max energy|mana|max mana|chakra|chi|enmp)$/.test(k)) return "__en"; return k; }
+function parseBuff(t){ const out=[]; String(t||"").replace(BUFF_RE,(m,stat,sg,n,pct)=>{ out.push({stat:stat.trim(),key:bkey(stat),n:num(n)*(sg==="-"?-1:1),pct:!!pct}); return m; }); return out; }
+const buffText=t=>parseBuff(t).map(b=>`${b.n<0?"−":"+"}${fmt(Math.abs(b.n))}${b.pct?"%":""} ${b.key==="__hp"?"max HP":b.key==="__en"?"max energy":b.stat}`).join(", ")||String(t||"");
+function activeBuffs(c){ const src=[]; (c.items||[]).forEach(it=>{ if(it&&it.buff&&truthy(it.equipped)) src.push({name:it.name,effect:it.buff,gear:true}); });
+ (c.buffs||[]).forEach(b=>{ if(b&&(b.turns===""||b.turns==null||num(b.turns)>0)) src.push({name:b.name,effect:b.effect}); }); return src; }
+function buffAgg(c){ const agg={}; activeBuffs(c).forEach(s=>parseBuff(s.effect).forEach(b=>{ const a=agg[b.key]=agg[b.key]||{label:b.key==="__hp"?"max HP":b.key==="__en"?"max energy":b.stat,flat:0,pct:0}; if(b.pct) a.pct+=b.n; else a.flat+=b.n; })); return agg; }
+const isNumStat=v=>/^[\s\d,.\-]+$/.test(String(v||""))&&/\d/.test(String(v||""));
+function effMax(c,k){ const base=num(k==="hp"?c.hpMax:c.enMax); const a=buffAgg(c)[k==="hp"?"__hp":"__en"]; return a?Math.max(0,Math.round(base+a.flat+base*a.pct/100)):base; }
+function statCell(c,s){ const a=buffAgg(c)[bkey(s.k)]; if(!a) return esc(s.v||"—");
+ if(isNumStat(s.v)){ const base=num(s.v), tot=Math.round(base+a.flat+base*a.pct/100), d=tot-base; return `${fmt(tot)} <small class="bonus ${d<0?"neg":""}">(${d<0?"−":"+"}${fmt(Math.abs(d))})</small>`; }
+ return `${esc(s.v||"—")} <small class="bonus">(${a.flat?(a.flat>0?"+":"−")+fmt(Math.abs(a.flat)):""}${a.pct?(a.flat?", ":"")+(a.pct>0?"+":"−")+Math.abs(a.pct)+"%":""})</small>`; }
+function buffBox(id,c){ const agg=buffAgg(c), chips=Object.values(agg).flatMap(a=>[a.flat?{t:`${a.flat>0?"+":"−"}${fmt(Math.abs(a.flat))} ${a.label}`,neg:a.flat<0}:null,a.pct?{t:`${a.pct>0?"+":"−"}${Math.abs(a.pct)}% ${a.label}`,neg:a.pct<0}:null]).filter(Boolean);
+ const gear=(c.items||[]).map((it,i)=>({it,i})).filter(x=>x.it&&x.it.buff), temp=c.buffs||[];
+ return `<div class="section"><div class="section-head"><h2>Buffs &amp; gear</h2><span class="muted">${activeBuffs(c).length} active</span></div>
+ <div class="card" style="gap:14px">
+  ${chips.length?`<div class="row">${chips.map(x=>`<span class="buff-chip ${x.neg?"neg":""}">${esc(x.t)}</span>`).join("")}</div>`:`<p class="meta">No buffs active. Equip gear that has a buff, or add a temporary buff below. Stats above update automatically.</p>`}
+  ${gear.length?`<div style="display:grid;gap:6px"><span class="eyebrow">Gear with buffs</span><ul class="clean">${gear.map(({it,i})=>`<li class="row" style="justify-content:space-between;gap:8px"><span style="min-width:0"><b>${esc(it.name)}</b> <span class="meta">${esc(buffText(it.buff))}</span></span><button class="btn small ${truthy(it.equipped)?"primary":""}" data-act="eq-toggle" data-c="${id}" data-i="${i}" aria-pressed="${truthy(it.equipped)}">${truthy(it.equipped)?"Equipped":"Equip"}</button></li>`).join("")}</ul></div>`:""}
+  <div style="display:grid;gap:6px"><span class="eyebrow">Temporary buffs</span>
+   ${temp.length?`<ul class="clean">${temp.map((b,i)=>`<li class="row" style="justify-content:space-between;gap:8px"><span style="min-width:0"><b>${esc(b.name||"Buff")}</b> <span class="meta">${esc(buffText(b.effect))}${b.turns===""||b.turns==null?" · until removed":` · ${fmt(num(b.turns))} turn${num(b.turns)===1?"":"s"} left`}</span></span><button class="btn small" data-act="bf-del" data-c="${id}" data-i="${i}">Remove</button></li>`).join("")}</ul>
+   <div><button class="btn small" data-act="bf-tick" data-c="${id}">End of turn (−1 turn)</button></div>`:`<p class="meta">None right now.</p>`}
+   <div class="bf-add"><input type="text" id="bf-name" placeholder="Name: Stoneskin" aria-label="Buff name"><input type="text" id="bf-eff" placeholder="Defense+500, Speed+10%" aria-label="Buff effect"><input type="number" id="bf-turns" placeholder="Turns" min="1" aria-label="Turns (blank = until removed)"><button class="btn small" data-act="bf-add" data-c="${id}">Add buff</button></div>
+   <p class="edit-hint">Write buffs like <b>Defense+500</b>, <b>Speed-50</b>, <b>Magic ATK+10%</b>, <b>hpmax+1000</b> or <b>mpmax+500</b>. Stat names match the ones on the sheet.</p></div>
+ </div></div>`; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act; if(!/^(eq-toggle|bf-add|bf-del|bf-tick)$/.test(act)) return;
+ const cid=b.dataset.c, c=getC(cid); if(!c) return;
+ if(act==="eq-toggle"){ const it=c.items&&c.items[+b.dataset.i]; if(!it) return; it.equipped=!truthy(it.equipped); toast(`${it.name} ${it.equipped?"equipped":"unequipped"}`); }
+ else if(act==="bf-add"){ const eff=v("bf-eff"); if(!parseBuff(eff).length){ toast("Write the effect like Defense+500 or Speed+10%"); return; } const t=v("bf-turns"); c.buffs=(c.buffs||[]).concat([{name:v("bf-name")||"Buff",effect:eff,turns:t===""?"":Math.max(1,Math.round(num(t)))}]); toast("Buff added"); }
+ else if(act==="bf-del"){ c.buffs=(c.buffs||[]).filter((x,i)=>i!==+b.dataset.i); }
+ else if(act==="bf-tick"){ const before=(c.buffs||[]).length; c.buffs=(c.buffs||[]).map(x=>x.turns===""||x.turns==null?x:Object.assign({},x,{turns:num(x.turns)-1})).filter(x=>x.turns===""||x.turns==null||num(x.turns)>0); const gone=before-c.buffs.length; toast(gone?`${gone} buff${gone>1?"s":""} wore off`:"A turn passed"); }
+ c.hpCur=Math.min(num(c.hpCur),effMax(c,"hp")||num(c.hpCur)); if(c.enMax) c.enCur=Math.min(num(c.enCur),effMax(c,"en")||num(c.enCur));
+ put("characters",cid,c,true); render("keep"); });
+
 /* ================= render & routing ================= */
 function render(force){
  if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
@@ -1764,9 +1807,9 @@ document.addEventListener("click",e=>{
  if(act==="save-costs"){ const rows=collect("costs").filter(r=>r.rank).map(r=>({rank:r.rank,cost:num(r.cost)})); put("settings","rules",{costs:rows},true); render(true); toast("Costs saved"); return; }
  if(act==="reset-costs"){ put("settings","rules",{costs:DEFAULT_COSTS.map(([r,c])=>({rank:r,cost:c}))},true); render(true); toast("Default costs restored"); return; }
  const cid=b.dataset.c; if(!cid) return; const c=getC(cid); if(!c) return;
- if(act==="hp-"||act==="hp+"){ const a=Math.abs(num($("#hpAmt").value)); if(!a){toast("Type an amount first");return;} c.hpCur=Math.max(0,Math.min(num(c.hpMax),num(c.hpCur)+(act==="hp+"?a:-a))); }
- else if(act==="en-"||act==="en+"){ const a=Math.abs(num($("#enAmt").value)); if(!a){toast("Type an amount first");return;} c.enCur=Math.max(0,Math.min(num(c.enMax),num(c.enCur)+(act==="en+"?a:-a))); }
- else if(act==="rest"){ c.hpCur=num(c.hpMax); c.enCur=num(c.enMax); toast("Back to full"); }
+ if(act==="hp-"||act==="hp+"){ const a=Math.abs(num($("#hpAmt").value)); if(!a){toast("Type an amount first");return;} c.hpCur=Math.max(0,Math.min(effMax(c,"hp"),num(c.hpCur)+(act==="hp+"?a:-a))); }
+ else if(act==="en-"||act==="en+"){ const a=Math.abs(num($("#enAmt").value)); if(!a){toast("Type an amount first");return;} c.enCur=Math.max(0,Math.min(effMax(c,"en"),num(c.enCur)+(act==="en+"?a:-a))); }
+ else if(act==="rest"){ c.hpCur=effMax(c,"hp"); c.enCur=effMax(c,"en"); toast("Back to full"); }
  else if(act==="xp"){ const a=b.dataset.v?num(b.dataset.v):num($("#xpAmt").value); if(!a){toast("Type an amount of EXP first");return;} c.exp=num(c.exp)+a; let ups=0; const per=num(c.expPer)||100;
   while(c.exp>=per){ c.exp-=per; c.level=num(c.level)+1; c.sp=num(c.sp)+num(c.gainSp); c.stat=num(c.stat)+num(c.gainStat); ups++; }
   toast(ups?`Level up! Now level ${c.level}: +${fmt(num(c.gainSp)*ups)} skill points, +${fmt(num(c.gainStat)*ups)} stat points`:`+${a} EXP`); }
