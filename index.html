@@ -614,7 +614,7 @@ function drawSky(cv){ const W=cv.width, H=cv.height, key=W+"x"+H; const x=cv.get
  _skyCache[key]=off; x.drawImage(off,0,0); }
 
 function viewTrees(){ const T=trees();
- return `<section class="section"><div class="section-head"><h2>Skill trees</h2><button class="btn primary dm-only" data-act="new-tree">New skill tree</button></div>
+ return `<section class="section"><div class="section-head"><h2>Skill trees</h2><div class="actions dm-only"><button class="btn" data-act="new-tree-ai">Build a tree with AI</button><button class="btn primary" data-act="new-tree">New skill tree</button></div></div>
  ${loading()?`<p class="muted">Opening the codex…</p>`:T.length?`<p class="lede">Open a tree, pick whose build it is, and click a skill to spend that character's points. Use Edit tree to add or change skills.</p><div class="grid">${T.sort(byUpdated).map(treeCard).join("")}</div>`:emptyBox("No skill trees yet","Build a tree one skill at a time: give each a rank, a cost and the skills it needs first. Players then unlock skills with their character's skill points.","new-tree","Build the first tree")}</section>`; }
 function viewTree(id){
  const t=getT(id); if(!t) return notFound("skill tree","trees");
@@ -665,6 +665,7 @@ function editTree(id){
   ${fld("t-blurb","Description",t.blurb,"area",{wide:1,ph:"What this tree is and who it's for"})}
 
  </div><div class="actions"><button type="button" class="btn primary" data-act="save-tree-meta" data-id="${id}">Save details</button><a class="btn" href="#tree-${id}">Done editing</a><span style="flex:1"></span><button type="button" class="btn danger" data-act="del" data-col="trees" data-id="${id}">Delete tree</button></div></form>
+ ${treeAiBox(id,t)}
  <div class="tree-wrap">
   ${nodes.length?canvas(t,{},ui.editSel[id],"edit",id):`<div class="empty"><h3>No skills yet</h3><p class="muted">Fill in the form to add the first skill. Leave column and row blank and it places itself.</p></div>`}
   <aside class="side"><form class="fieldset" onsubmit="return false" id="nodeForm"><h3>${sel?"Edit skill":"Add a skill"}</h3>
@@ -1398,6 +1399,55 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  if(act==="shop-ai-stop"){ ui.shop.ai.ctl&&ui.shop.ai.ctl.abort(); return; }
 });
 document.addEventListener("change",e=>{ if(e.target.id==="shop-buyer"){ ui.shop.buyer=e.target.value; e.target.blur(); render("keep"); } });
+
+/* ================= AI skill tree maker ================= */
+ui.treeAi={desc:"",size:"15",char:"",mode:"replace",busy:false,err:"",ctl:null,confirm:false};
+function treeAiBox(id,t){ const A=ui.treeAi, has=(t.nodes||[]).length>0, C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+ if(!CAP.sample) return `<div class="fieldset"><h3>Build it with AI</h3><p class="muted">The AI skill tree maker works in the claude.ai version of the codex. Open it there to generate trees; they show up here too if you share the same saved data.</p></div>`;
+ return `<form class="fieldset" onsubmit="return false"><h3>Build it with AI</h3>
+  <label class="fld"><span>What kind of tree?</span><textarea id="ta-desc" placeholder="A storm mage who starts with sparks and ends calling down hurricanes. Include a choice between Thunder and Lightning paths.">${esc(A.desc)}</textarea></label>
+  <div class="form-grid">
+   <label class="fld"><span>Size</span><select id="ta-size">${[["8","Small (about 8 skills)"],["15","Medium (about 15)"],["25","Large (about 25)"],["35","Huge (about 35)"]].map(([k,n])=>`<option value="${k}" ${A.size===k?"selected":""}>${n}</option>`).join("")}</select></label>
+   <label class="fld"><span>Build it around a character (optional)</span><select id="ta-char"><option value="">No one in particular</option>${C.map(c=>`<option value="${c.id}" ${A.char===c.id?"selected":""}>${esc(c.name||"Unnamed")}</option>`).join("")}</select></label>
+   ${has?`<label class="fld"><span>This tree already has ${t.nodes.length} skills</span><select id="ta-mode"><option value="replace" ${A.mode==="replace"?"selected":""}>Replace them</option><option value="add" ${A.mode==="add"?"selected":""}>Add new branches</option></select></label>`:""}
+  </div>
+  <p class="edit-hint">Claude designs branches that start cheap and grow stronger, links prerequisites, adds a capstone that needs two branches, and may add an either/or choice. Ranks come from your cost table. You can edit every skill afterward.</p>
+  <div class="actions"><button type="button" class="btn ${A.confirm?"danger primary":"primary"}" data-act="tree-ai" data-id="${id}" ${A.busy?"disabled":""}>${A.busy?"Designing the tree…":A.confirm?"Tap again to replace the current skills":"Generate skill tree"}</button>${A.busy?`<button type="button" class="btn" data-act="tree-ai-stop">Stop</button>`:""}</div>
+  ${A.busy?`<p class="edit-hint">A full tree usually takes 20 to 60 seconds.</p>`:""}${A.err?`<div class="note">${esc(A.err)}</div>`:""}</form>`; }
+async function treeAi(id){ const A=ui.treeAi; if(A.busy) return; const t0=getT(id); if(!t0) return;
+ const desc=A.desc.trim(), ch=A.char&&S.data.characters[A.char]; if(!desc&&!ch){ toast("Describe the tree or pick a character first"); return; }
+ const n=num(A.size)||15, adding=A.mode==="add"&&(t0.nodes||[]).length>0;
+ const world=worlds().find(w=>w.name&&w.name===(t0.campaign||(ch&&ch.campaign)));
+ const chInfo=ch?{name:ch.name,race:ch.race,cls:ch.cls,tags:ch.tags,skills:(ch.skills||[]).slice(0,12).map(s=>[s.rank,s.name]),moves:(ch.moves||[]).slice(0,10).map(m=>m.name)}:null;
+ const prompt=`Design a skill tree for a homebrew tabletop RPG (players unlock skills with skill points).
+Theme: ${desc||"(none given; base it on the character)"}
+${chInfo?`Build it for this character. Fit their powers and grow them further; you may include skills they already have as early nodes: ${JSON.stringify(chInfo).slice(0,2500)}`:""}
+${world?`World: ${world.name}. ${str(world.blurb,800)}`:""}
+${adding?`The tree already has these skills; make NEW branches that don't repeat them: ${(t0.nodes||[]).slice(0,40).map(x=>x.n).join(", ")}`:""}
+Size: about ${n} skills.
+Shape: ${n<=10?"2 to 4":n<=20?"3 to 5":"4 to 7"} branches. Each branch starts with one skill that needs nothing, then grows outward; later skills need the earlier skill in their branch. Add one or two capstone skills that need skills from two different branches. You may include one either/or fork: two skills that exclude each other.
+Ranks: use only these, cheap near the start and stronger further out: ${costs().map(x=>x.rank).join(", ")}.
+Return ONLY JSON: {"name":string,"blurb":string (one sentence),"skills":[{"key":string (short unique id, like "f1"),"name":string,"rank":string,"desc":string (one sentence with its game effect),"icon":string (1 or 2 letters),"needs":[key],"anyOf":[key],"excludes":[key]}]}`;
+ A.busy=true; A.err=""; A.confirm=false; A.ctl=new AbortController(); render(true);
+ try{ const r=await CAP.sample.json(prompt,{signal:A.ctl.signal,modelTier:"default"});
+  const list=Array.isArray(r&&r.skills)?r.skills.slice(0,45):[]; if(!list.length) throw {code:"invalid_json"};
+  const keyId={}; list.forEach(s=>{ const k=String(s&&s.key||""); if(k&&!keyId[k]) keyId[k]=rid(); });
+  const ref=(arr,self)=>Array.isArray(arr)?[...new Set(arr.map(k=>keyId[String(k)]).filter(x=>x&&x!==self))]:[];
+  const nodes=list.filter(s=>s&&s.key&&s.name&&keyId[String(s.key)]).map(s=>{ const id2=keyId[String(s.key)];
+   return {id:id2,n:str(s.name,60),r:str(s.rank,10),cost:"",d:str(s.desc,300),icon:str(s.icon,3),req:ref(s.needs,id2),any:ref(s.anyOf,id2),ex:ref(s.excludes,id2),ph:false}; });
+  if(!nodes.length) throw {code:"invalid_json"};
+  const t=getT(id); t.nodes=adding?(t.nodes||[]).concat(nodes):nodes;
+  if(!t.name&&r.name) t.name=str(r.name,60); if(!t.blurb&&r.blurb) t.blurb=str(r.blurb,300); if(!t.campaign&&ch&&ch.campaign) t.campaign=ch.campaign;
+  put("trees",id,t,true); delete ui.editSel[id]; toast(`${nodes.length} skills ${adding?"added":"created"}. Click any skill to tweak it.`); }
+ catch(e){ A.err=aiErr(e); if(HIDE_CODES.includes(e&&e.code)) CAP.sample=null; }
+ A.busy=false; render("keep"); }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act;
+ if(act==="tree-ai"){ const t=getT(b.dataset.id); const replacing=t&&(t.nodes||[]).length&&ui.treeAi.mode!=="add"; if(replacing&&!ui.treeAi.confirm){ ui.treeAi.confirm=true; render("keep"); return; } treeAi(b.dataset.id); return; }
+ if(act==="tree-ai-stop"){ ui.treeAi.ctl&&ui.treeAi.ctl.abort(); return; }
+ if(act==="new-tree-ai"){ const k=rid(); put("trees",k,newTree(),true); ui.treeAi.confirm=false; ui.treeAi.err=""; go("edit-tree-"+k); setTimeout(()=>{ const d=$("#ta-desc"); if(d){ d.scrollIntoView({block:"center"}); d.focus(); } },120); return; }
+});
+document.addEventListener("input",e=>{ if(e.target.id==="ta-desc"){ ui.treeAi.desc=e.target.value; ui.treeAi.confirm=false; } });
+document.addEventListener("change",e=>{ const t=e.target; if(t.id==="ta-size") ui.treeAi.size=t.value; if(t.id==="ta-char") ui.treeAi.char=t.value; if(t.id==="ta-mode"){ ui.treeAi.mode=t.value; ui.treeAi.confirm=false; } });
 
 /* ================= render & routing ================= */
 function render(force){
