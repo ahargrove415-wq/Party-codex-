@@ -351,10 +351,12 @@ async function fbUploadLocal(b){ const L=localSaved(); b.disabled=true; b.textCo
   toast(fail?`Uploaded ${n}; ${fail} couldn't be saved with your access`:`Uploaded ${n} from this browser`); b.disabled=false; render(true); }
 async function fbImport(b){ if(!isDM()) return; b.disabled=true; b.textContent="Importing…";
   try{ const r=await fetch("seed.json",{cache:"no-store"}); const seed=await r.json(); let n=0;
+   const merge=seed._merge||{}; delete seed._merge;
    for(const [col,docs] of Object.entries(seed)){ for(const [id,doc] of Object.entries(docs)){ if(S.data[col]&&S.data[col][id]) continue; await FB.fs.collection(col).doc(id).set(doc); n++; } }
-   toast(n?`Imported ${n} items from the claude.ai codex`:"Everything from the backup is already here"); }
+   for(const [col,docs] of Object.entries(merge)){ for(const [id,doc] of Object.entries(docs)){ const done=LS.get("codex2:merged")||{}; const key=col+"/"+id+"/"+(doc._rev||1); if(done[key]) continue; const d=Object.assign({},doc); delete d._rev; d.updatedAt=Date.now(); await FB.fs.collection(col).doc(id).set(d,{merge:true}); done[key]=1; LS.set("codex2:merged",done); n++; } }
+   toast(n?`Loaded ${n} updates from Claude`:"Everything from Claude is already here"); }
   catch(e){ toast("Import failed: "+((e&&e.message)||"unknown error")); }
-  b.disabled=false; b.textContent="Import characters from the claude.ai codex"; }
+  b.disabled=false; b.textContent="Load updates from Claude"; }
 </script>
 <script>
 /* ================= helpers ================= */
@@ -427,7 +429,7 @@ const REPS={
  sections:{cols:[["h","Heading"],["body","Text (start a line with - for a bullet)",1]],grid:"minmax(0,1fr) minmax(0,2.5fr) auto"},
  npcs:{cols:[["name","Name"],["base","Based in"],["seen","First seen"],["top","Top stat"],["bio","Bio",1]],grid:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 6em minmax(0,1.8fr) auto"},
  costs:{cols:[["rank","Rank"],["cost","Cost"]],grid:"minmax(0,1fr) minmax(0,1fr) auto"},
- shopItems:{cols:[["id","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em auto minmax(0,1.6fr) auto"}
+ shopItems:{cols:[["id","","hid"],["name","Item"],["cat","Category"],["rarity","Rarity"],["price","Price"],["stock","Stock"],["effect","Effect (optional)"],["hidden","Hidden","chk"],["desc","What it does",1]],grid:"minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 5.5em 4.5em minmax(0,.9fr) auto minmax(0,1.5fr) auto"}
 };
 function repRow(name,r){ const R=REPS[name]; r=r||{};
  return `<div class="rep-row" style="grid-template-columns:${R.grid}">${R.cols.map(([k,l,a])=>a==="hid"?`<input type="hidden" data-k="${k}" value="${esc(r[k])}">`:a==="chk"?`<label class="rep-chk"><input type="checkbox" data-k="${k}" ${r[k]&&r[k]!=="0"?"checked":""}> ${esc(l)}</label>`:a?`<textarea data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" rows="1">${esc(r[k])}</textarea>`:`<input type="text" data-k="${k}" placeholder="${esc(l)}" aria-label="${esc(l)}" value="${esc(r[k])}">`).join("")}<button type="button" class="rep-del" data-act="rep-del" aria-label="Remove row">✕</button></div>`; }
@@ -449,7 +451,7 @@ function viewHome(){
   <p class="lede">A blank book for your campaigns. Write up characters, build skill trees one skill at a time, and keep each world's lore and NPCs together. Everything you add saves for the whole party.</p>
   <div class="actions"><button class="btn primary" data-act="new-char">New character</button><a class="btn" href="#ai-char">Create with AI</a><button class="btn dm-only" data-act="new-tree">New skill tree</button><button class="btn dm-only" data-act="new-world">New world</button><button class="btn dm-only" data-act="new-map">New map</button><a class="btn" href="#playmat">Play mat</a><a class="btn" href="#shops">Shops</a></div>
   <p class="meta">${isDM()?"DM mode: you can build trees, worlds and maps and see DM notes. Switch to Player at the top to see what your table sees.":"Player mode: you can edit characters, spend skill points, move tokens on the play mat and buy from shops. Trees, worlds, maps and DM notes are the DM's."}</p>
-  ${FB.on&&isDM()?`<div><button class="btn" data-act="fb-import">Import characters from the claude.ai codex</button></div>`:""}${FB.on&&FB.user?(()=>{ const L=localSaved(); const n=Object.values(L).reduce((t,r)=>t+r.length,0); const nc=(L.characters||[]).length; return n?`<div><button class="btn primary" data-act="fb-local">Upload ${n} item${n>1?"s":""} saved in this browser${nc?` (${nc} character${nc>1?"s":""})`:""}</button></div>`:""; })():""}${FB.on&&FB.ready&&!FB.user?`<p class="meta">Sign in with Google at the top right to edit characters, move tokens and shop.</p>`:""}
+  ${FB.on&&isDM()?`<div><button class="btn" data-act="fb-import">Load updates from Claude (characters, skill trees, shops)</button></div>`:""}${FB.on&&FB.user?(()=>{ const L=localSaved(); const n=Object.values(L).reduce((t,r)=>t+r.length,0); const nc=(L.characters||[]).length; return n?`<div><button class="btn primary" data-act="fb-local">Upload ${n} item${n>1?"s":""} saved in this browser${nc?` (${nc} character${nc>1?"s":""})`:""}</button></div>`:""; })():""}${FB.on&&FB.ready&&!FB.user?`<p class="meta">Sign in with Google at the top right to edit characters, move tokens and shop.</p>`:""}
   <div class="counts"><span><b>${C.length}</b>characters</span><span><b>${T.length}</b>skill trees</span><span><b>${Wd.length}</b>worlds</span><span><b>${maps().length}</b>maps</span></div></section>
  ${loading()?`<p class="muted">Opening the codex…</p>`:`
  <section class="section"><div class="section-head"><h2>Recent characters</h2><a href="#characters">All characters</a></div>
@@ -619,7 +621,7 @@ function viewTrees(){ const T=trees();
 function viewTree(id){
  const t=getT(id); if(!t) return notFound("skill tree","trees");
  const C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
- const cid=(ui.treeChar[id]&&S.data.characters[ui.treeChar[id]])?ui.treeChar[id]:(C[0]&&C[0].id); const c=cid?getC(cid):null;
+ const own=C.find(x=>x.unlocked&&x.unlocked[id]&&x.unlocked[id].length)||C.find(x=>t.campaign&&x.campaign===t.campaign); const cid=(ui.treeChar[id]&&S.data.characters[ui.treeChar[id]])?ui.treeChar[id]:((own||C[0]||{}).id); const c=cid?getC(cid):null;
  const un=new Set(c&&c.unlocked&&c.unlocked[id]||[]); const pts=c?num(c.sp):0; const st=treeState(t,un,pts);
  const map={}; (t.nodes||[]).forEach(n=>map[n.id]=n); const sel=map[ui.sel[id]]; const ex=exMap(t);
  let detail=`<div class="card"><span class="eyebrow">Selected skill</span><p class="muted">Click a skill to see what it does${c?" and unlock it":""}.</p></div>`;
@@ -1319,9 +1321,9 @@ function viewShop(id){
  const cats=[...new Set(items.map(it=>it.cat).filter(Boolean))];
  const shown=items.filter(it=>ui.shop.cat==="all"||it.cat===ui.shop.cat);
  const closed=s.open===false;
- const card=it=>{ const st=stockOf(it), price=num(it.price), afford=buyer&&num(buyer.money)>=price, avail=inStock(it);
+ const card=it=>{ const st=stockOf(it), price=num(it.price), afford=buyer&&purse(s,buyer)>=price, avail=inStock(it);
   return `<div class="card shop-item ${avail?"":"sold"}"><div class="row" style="justify-content:space-between;align-items:start"><div style="display:grid;gap:2px;min-width:0"><h3>${esc(it.name||"Unnamed item")}</h3><span class="meta">${esc(it.cat||"")}</span></div>${rarChip(it.rarity)}</div>
-  ${it.desc?`<p class="muted" style="font-size:.94rem">${esc(it.desc)}</p>`:""}
+  ${it.desc?`<p class="muted" style="font-size:.94rem">${esc(it.desc)}</p>`:""}${fxText(it.effect)?`<p class="meta" style="color:var(--arcane)">Instant: ${esc(fxText(it.effect))}</p>`:""}
   <div class="row" style="justify-content:space-between;margin-top:auto"><span class="price mono">${fmt(price)} <small>${esc(cur)}</small></span><span class="meta">${st===""?"In stock":num(st)>0?`${fmt(num(st))} left`:"Sold out"}${it.hidden?" · hidden":""}</span></div>
   <div class="actions">${closed&&!dm?"":`<button class="btn small primary" data-act="buy" data-id="${id}" data-i="${it.i}" ${!buyer||!avail||!afford||closed?"disabled":""}>${!avail?"Sold out":!buyer?"Pick a buyer":!afford?"Can't afford":"Buy"}</button>`}${dm&&buyer?`<button class="btn small" data-act="give" data-id="${id}" data-i="${it.i}" ${avail?"":"disabled"}>Give free</button>`:""}</div></div>`; };
  return `<a href="#shops" class="muted">← All shops</a>
@@ -1335,7 +1337,7 @@ function viewShop(id){
   ${dm?dmBox("shop-"+id):""}
  </div><aside class="side">
   <div class="card"><span class="eyebrow">Shopping as</span>${C.length?`<select id="shop-buyer" aria-label="Buyer">${C.map(c=>`<option value="${c.id}" ${c.id===buyerId?"selected":""}>${esc(c.name||"Unnamed")}</option>`).join("")}</select>
-   <div class="row" style="justify-content:space-between;align-items:end"><div><span class="eyebrow">Money</span><div class="points">${fmt(num(buyer&&buyer.money))} <small style="font-size:.9rem">${esc(cur)}</small></div></div><a class="btn small" href="#char-${buyerId}">Open sheet</a></div>
+   <div class="row" style="justify-content:space-between;align-items:end"><div><span class="eyebrow">${paysSp(s)?"Skill points":"Money"}</span><div class="points">${fmt(purse(s,buyer))} <small style="font-size:.9rem">${esc(cur)}</small></div></div><a class="btn small" href="#char-${buyerId}">Open sheet</a></div>
    ${dm?`<div class="adj"><input type="number" id="shop-money" placeholder="Amount" aria-label="Money amount"><button class="btn small" data-act="shop-money" data-v="1" data-id="${id}">Add</button><button class="btn small" data-act="shop-money" data-v="-1" data-id="${id}">Take</button></div>`:""}
    <p class="meta">Bought items go into this character's Items list.</p>`:`<p class="muted">Create a character to buy things.</p><div><button class="btn primary" data-act="new-char">New character</button></div>`}</div>
   ${buyer&&(buyer.items||[]).length?`<div class="card"><span class="eyebrow">${esc(buyer.name||"Their")} inventory</span><ul class="clean">${buyer.items.slice(-8).reverse().map(i=>`<li>${esc(i.name)}</li>`).join("")}</ul></div>`:""}
@@ -1352,7 +1354,7 @@ function editShop(id){
    <label class="fld"><span>Campaign</span><input type="text" id="s-camp" list="camps" value="${esc(s.campaign)}"></label>${fld("s-cur","Currency",s.currency||"gold","text",{ph:"gold, credits, ryo"})}
    ${fld("s-blurb","Description",s.blurb,"area",{wide:1,ph:"What the shop looks like and what it's known for"})}
    <label class="row" style="gap:8px"><input type="checkbox" id="s-open" ${s.open!==false?"checked":""}> Open for business</label></div></div>
-  <div class="fieldset"><h3>Stock</h3><p class="edit-hint">Leave Stock blank for unlimited. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
+  <div class="fieldset"><h3>Stock</h3><p class="edit-hint">Leave Stock blank for unlimited. Effect makes an item apply instantly instead of going to the inventory: write things like <b>level+1</b>, <b>stat+25</b>, <b>sp+10</b>, <b>hpmax+500</b>, <b>mpmax+500</b>, <b>hp+200</b> or <b>money+100</b>. A shop whose currency is "Skill points" charges skill points. Tick Hidden to keep an item off the shelf for players (secret stock, special orders). Rarity: Common, Uncommon, Rare, Very rare, Legendary, Artifact.</p>${repeater("shopItems",s.items,"Add item")}</div>
   <div class="fieldset"><h3>Stock the shelves with AI</h3>
    ${CAP.sample?`<label class="fld"><span>What should it sell? (optional)</span><input type="text" id="s-aihint" value="${esc(A.hint)}" placeholder="Cheap potions, a few cursed trinkets, one legendary blade"></label>
    <p class="edit-hint">Adds 6 to 10 items that fit the shop and campaign. Prices follow your existing items and characters' money. Review, then Save.</p>
@@ -1362,7 +1364,7 @@ function editShop(id){
 }
 function readShopForm(id){ const s=getS(id); if(!s) return null;
  Object.assign(s,{name:v("s-name"),keeper:v("s-keeper"),campaign:v("s-camp"),currency:v("s-cur")||"gold",blurb:v("s-blurb"),open:$("#s-open").checked,
-  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
+  items:collect("shopItems").map(it=>({id:it.id||rid(),name:it.name,cat:it.cat,rarity:it.rarity,price:num(it.price),stock:it.stock===""?"":num(it.stock),desc:it.desc,effect:it.effect||"",hidden:it.hidden==="1"})).filter(it=>it.name)}); return s; }
 async function shopAi(id){ const A=ui.shop.ai; if(A.busy) return; const s=readShopForm(id); if(!s) return;
  const world=worlds().find(w=>w.name&&w.name===s.campaign); const money=chars().map(c=>num(c.money)).filter(Boolean);
  const prompt=`Stock a shop in a homebrew tabletop RPG.
@@ -1379,11 +1381,22 @@ Return ONLY JSON: {"items":[{"name":string,"cat":string (Weapons, Armor, Potions
   if(!add.length) throw {code:"invalid_json"}; s.items=s.items.concat(add); ui.shopDraft={id,s}; toast(`${add.length} items added. Review them, then Save shop.`); }
  catch(e){ A.err=aiErr(e); if(HIDE_CODES.includes(e&&e.code)) CAP.sample=null; }
  A.busy=false; render(true); }
+const paysSp=s=>/skill\s*points?|^\s*sp\s*$/i.test(String(s&&s.currency||""));
+const purse=(s,c)=>num(c&&(paysSp(s)?c.sp:c.money));
+const FX_RE=/(level|stat|sp|hpmax|mpmax|hp|mp|money)\s*([+-])\s*(\d+)/gi;
+function fxText(e){ const L={level:"level",stat:"stat points",sp:"skill points",hpmax:"max HP",mpmax:"max energy",hp:"HP",mp:"energy",money:"money"}; const out=[]; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ out.push(num(n)>=999999?`full ${L[k.toLowerCase()]}`:`${sg}${n} ${L[k.toLowerCase()]}`); return m; }); return out.join(", "); }
+function applyFx(c,e){ let any=false; String(e||"").replace(FX_RE,(m,k,sg,n)=>{ n=num(n)*(sg==="-"?-1:1); any=true; k=k.toLowerCase();
+  if(k==="level"){ c.level=num(c.level)+n; c.stat=Math.max(0,num(c.stat)+num(c.gainStat)*n); }
+  else if(k==="stat") c.stat=Math.max(0,num(c.stat)+n); else if(k==="sp") c.sp=Math.max(0,num(c.sp)+n); else if(k==="money") c.money=Math.max(0,num(c.money)+n);
+  else if(k==="hpmax"){ c.hpMax=Math.max(0,num(c.hpMax)+n); c.hpCur=Math.max(0,num(c.hpCur)+n); } else if(k==="mpmax"){ c.enMax=Math.max(0,num(c.enMax)+n); c.enCur=Math.max(0,num(c.enCur)+n); }
+  else if(k==="hp") c.hpCur=Math.max(0,Math.min(num(c.hpMax)||Infinity,num(c.hpCur)+n)); else if(k==="mp") c.enCur=Math.max(0,Math.min(num(c.enMax)||Infinity,num(c.enCur)+n));
+  return m; }); return any; }
 function shopBuy(id,i,free){
  const s=getS(id); const it=s&&s.items[i]; const cid=v("shop-buyer"); const c=cid&&getC(cid); if(!it||!c) return;
  if(!inStock(it)){ toast("Sold out"); return; } if(s.open===false&&!free){ toast("The shop is closed"); return; }
- const price=free?0:num(it.price); if(num(c.money)<price){ toast("Not enough "+(s.currency||"gold")); return; }
- c.money=num(c.money)-price; c.items=(c.items||[]).concat([{name:it.name,desc:[it.rarity,it.desc].filter(Boolean).join(" · ")}]);
+ const price=free?0:num(it.price); if(purse(s,c)<price){ toast("Not enough "+(s.currency||"gold")); return; }
+ if(paysSp(s)) c.sp=num(c.sp)-price; else c.money=num(c.money)-price;
+ if(!applyFx(c,it.effect)) c.items=(c.items||[]).concat([{name:it.name,desc:[it.rarity,it.desc].filter(Boolean).join(" · ")}]);
  if(stockOf(it)!=="") it.stock=Math.max(0,num(it.stock)-1);
  s.log=[`${c.name||"Someone"} ${free?"was given":"bought"} ${it.name}${free?"":" for "+fmt(price)+" "+(s.currency||"gold")}`,...(s.log||[])].slice(0,30);
  put("characters",cid,c,true); put("shops",id,s,true); toast(free?`Gave ${it.name} to ${c.name||"them"}`:`Bought ${it.name}`); render("keep"); }
@@ -1393,7 +1406,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  if(act==="buy"){ shopBuy(id,+b.dataset.i,false); return; }
  if(act==="give"){ shopBuy(id,+b.dataset.i,true); return; }
  if(act==="shop-open"){ const s=getS(id); s.open=s.open===false; put("shops",id,s,true); render("keep"); toast(s.open?"Shop opened":"Shop closed"); return; }
- if(act==="shop-money"){ const cid=v("shop-buyer"), c=cid&&getC(cid); const a=Math.abs(num(v("shop-money"))); if(!c||!a){ toast("Type an amount first"); return; } c.money=Math.max(0,num(c.money)+num(b.dataset.v)*a); put("characters",cid,c,true); render("keep"); return; }
+ if(act==="shop-money"){ const cid=v("shop-buyer"), c=cid&&getC(cid); const a=Math.abs(num(v("shop-money"))); if(!c||!a){ toast("Type an amount first"); return; } if(paysSp(getS(id))) c.sp=Math.max(0,num(c.sp)+num(b.dataset.v)*a); else c.money=Math.max(0,num(c.money)+num(b.dataset.v)*a); put("characters",cid,c,true); render("keep"); return; }
  if(act==="save-shop"){ const s=readShopForm(id); if(!s) return; ui.shopDraft=null; put("shops",id,s,true); toast("Shop saved"); go("shop-"+id); return; }
  if(act==="shop-ai"){ ui.shop.ai.hint=v("s-aihint"); shopAi(id); return; }
  if(act==="shop-ai-stop"){ ui.shop.ai.ctl&&ui.shop.ai.ctl.abort(); return; }
