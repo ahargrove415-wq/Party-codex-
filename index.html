@@ -300,6 +300,20 @@ body.player .dm-only{display:none!important}
 .hub{position:absolute;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 40% 35%,#4a3416,#1a130a);border:2px solid #e2ae4f;color:#ffd98a;font:700 18px var(--f-display);box-shadow:0 0 26px rgba(226,174,79,.55),0 0 60px rgba(226,174,79,.2)}
 @media (prefers-reduced-motion:reduce){.sk{transition:none;animation:none!important}.sk:hover{transform:none}}
 
+.dropzone{border:2px dashed var(--line);border-radius:var(--radius);padding:18px 20px;display:grid;gap:6px;background:var(--panel)}
+.dropzone.over{border-color:var(--brass);background:var(--brass-soft)}
+.ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.ph-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px;display:grid;gap:6px;align-content:start;min-width:0}
+.ph-img{padding:0;border:0;background:none;cursor:zoom-in;display:block}
+.ph-card img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:7px;display:block;background:var(--sunk)}
+.ph-cap{width:100%;font-size:.88rem;padding:4px 7px}
+.ph-card select{width:100%;font-size:.84rem;padding:4px 6px}
+.portrait{width:132px;height:165px;object-fit:cover;border-radius:12px;border:1px solid var(--line);flex:none;background:var(--sunk)}
+.portrait.empty{display:grid;place-items:center;color:var(--muted);font-size:.84rem}
+.cc-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;border:1px solid var(--line);flex:none}
+.sheet-title{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.lightbox{position:fixed;inset:0;z-index:30;background:rgba(5,7,12,.88);display:grid;place-items:center;align-content:center;gap:10px;padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));cursor:zoom-out;color:#eee;text-align:center}
+.lightbox img{max-width:min(92vw,1100px);max-height:80vh;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 </style>
 
 <header class="top"><div class="top-in">
@@ -307,6 +321,7 @@ body.player .dm-only{display:none!important}
   <nav class="nav" id="nav">
     <a href="#home" data-v="home">Home</a>
     <a href="#characters" data-v="characters">Characters</a>
+    <a href="#photos" data-v="photos">Photos</a>
     <a href="#trees" data-v="trees">Skill trees</a>
     <a href="#worlds" data-v="worlds">Worlds</a>
     <a href="#maps" data-v="maps">Maps</a>
@@ -382,8 +397,8 @@ const newTree=()=>({name:"",campaign:"",blurb:"",lanes:[],nodes:[],createdAt:Dat
 const newWorld=()=>({name:"",tag:"",blurb:"",sections:[],npcs:[],createdAt:Date.now()});
 
 /* ================= store ================= */
-const COLS=["characters","trees","worlds","settings","maps","mats","shops"];
-const S={mode:"loading",db:null,data:{characters:{},trees:{},worlds:{},settings:{},maps:{},mats:{},dm:{},tokens:{},shops:{}},note:""};
+const COLS=["characters","trees","worlds","settings","maps","mats","shops","photos"];
+const S={mode:"loading",db:null,data:{characters:{},trees:{},worlds:{},settings:{},maps:{},mats:{},dm:{},tokens:{},shops:{},photos:{}},note:""};
 function writeFail(e){ if(FB.on&&e&&e.code==="permission-denied"){ toast(FB.user?"Only the DM can change that.":"Sign in with Google (top right) to make changes."); return; } if(e&&e.code==="invalid_argument"&&S.db){ if(typeof CAP!=="undefined") CAP.readOnly=true; toast("You can't change that with your access. Ask the DM to invite you by email with edit access."); setTimeout(()=>render(true),0); } else toast("Couldn't save: "+((e&&e.message)||"unknown error")); }
 const chain={};
 function put(col,id,doc,quiet){ doc.updatedAt=Date.now(); S.data[col]=Object.assign({},S.data[col],{[id]:doc});
@@ -461,7 +476,7 @@ function viewHome(){
  <section class="section"><div class="section-head"><h2>Worlds</h2><a href="#worlds">All worlds</a></div>
   ${Wd.length?`<div class="grid">${Wd.sort(byUpdated).slice(0,6).map(worldCard).join("")}</div>`:emptyBox("No worlds yet","Give each campaign a page for its places, factions, rules and NPCs.","new-world","Add the first world")}</section>`}`;
 }
-function charCard(c){ return `<a class="card char-card" href="#char-${c.id}"><span class="eyebrow">${esc(c.campaign||"No campaign")}${c.player?" · "+esc(c.player):""}</span><h3>${esc(c.name||"Unnamed character")}</h3>
+function charCard(c){ return `<a class="card char-card" href="#char-${c.id}">${portraitOf(c)?`<div style="display:flex;justify-content:flex-end;margin-bottom:-56px">${pImg(c,"cc-thumb")}</div>`:""}<span class="eyebrow">${esc(c.campaign||"No campaign")}${c.player?" · "+esc(c.player):""}</span><h3>${esc(c.name||"Unnamed character")}</h3>
  <div class="line"><span>${esc([c.race,c.cls].filter(Boolean).join(" · ")||"—")}</span><span class="mono">Lv ${fmt(c.level)}</span></div>
  ${c.hpMax?`<div class="line"><span>HP</span><span class="mono">${fmt(c.hpCur)} / ${fmt(c.hpMax)}</span></div>`:""}</a>`; }
 function treeCard(t){ return `<a class="card" href="#tree-${t.id}"><span class="eyebrow">${esc(t.campaign||"Skill tree")}</span><h3>${esc(t.name||"Untitled tree")}</h3><p class="meta">${(t.nodes||[]).length} skills${t.blurb?" · "+esc(t.blurb.slice(0,90)):""}</p></a>`; }
@@ -507,7 +522,7 @@ function viewChar(id){
  </aside>`;
  return `<a href="#characters" class="muted">← All characters</a>
  <section class="sheet-head"><span class="eyebrow">${W?`<a href="#world-${W.id}">${esc(c.campaign)}</a>`:esc(c.campaign||"No campaign")}${c.player?" · played by "+esc(c.player):""}</span>
-  <div class="row" style="justify-content:space-between"><h1>${esc(c.name||"Unnamed character")}</h1><a class="btn" href="#edit-char-${id}">Edit sheet</a></div>
+  <div class="row" style="justify-content:space-between"><div class="sheet-title">${portraitOf(c)?`<button class="ph-img" data-act="ph-view" data-id="${c.portrait}" aria-label="View portrait">${pImg(c,"portrait")}</button>`:""}<h1>${esc(c.name||"Unnamed character")}</h1></div><a class="btn" href="#edit-char-${id}">Edit sheet</a></div>
   <div class="row">${c.race?`<span class="tag">${esc(c.race)}</span>`:""}${c.cls?`<span class="tag">${esc(c.cls)}</span>`:""}<span class="tag mono">Lv ${fmt(c.level)}${c.levelCap?" / "+esc(c.levelCap):""}</span>${used.map(t=>`<a class="tag" href="#tree-${t.id}">Tree: ${esc(t.name||"Untitled")}</a>`).join("")}</div>
   ${c.bio?`<p class="lede">${esc(c.bio)}</p>`:""}</section>
  <div class="sheet"><div class="section" style="min-width:0">
@@ -518,6 +533,7 @@ function viewChar(id){
   ${(c.moves||[]).length?`<div class="section"><div class="section-head"><h2>Moves &amp; spells</h2><span class="muted">${c.moves.length}</span></div>${list(c.moves,moveRow)}</div>`:""}
   ${(c.items||[]).length?`<div class="section"><div class="section-head"><h2>Items</h2></div>${list(c.items,itemRow)}</div>`:""}
   ${(c.sections||[]).map(x=>`<div class="section"><div class="section-head"><h2>${esc(x.h||"Notes")}</h2></div><div class="card">${bodyText(x.body)}</div></div>`).join("")}
+  ${charPhotos(id,c)}
   ${dmBox("char-"+id)}
  </div>${tracker}</div>`;
 }
@@ -526,6 +542,7 @@ function editChar(id){
  return `<a href="#char-${id}" class="muted">← Back to sheet</a>
  <section class="sheet-head"><span class="eyebrow">Editing</span><h1>${esc(c.name||"New character")}</h1></section>
  <form class="form" id="charForm" data-id="${id}" onsubmit="return false">${campOptions()}
+  ${portraitEditor(id,c)}
   <div class="fieldset"><h3>Basics</h3><div class="form-grid">
    ${fld("f-name","Name",c.name,"text",{ph:"Character name"})}${fld("f-player","Player",c.player)}
    <label class="fld"><span>Campaign</span><input type="text" id="f-campaign" list="camps" value="${esc(c.campaign)}" placeholder="Match a world's name to link it"></label>
@@ -821,6 +838,8 @@ function viewAiChar(){
    <label class="fld"><span>Power level</span><select id="ai-power">${powers.map(p=>`<option ${A.power===p?"selected":""}>${esc(p)}</option>`).join("")}</select></label></div>
   ${CAP.img?`<div class="fld"><span>Picture (optional): art, a sketch, a mini, a cosplay photo</span>
    ${A.imgUrl?`<div class="row"><img class="ai-prev" src="${A.imgUrl}" alt="Picture the character will be based on"><button type="button" class="btn small" data-act="ai-noimg">Remove picture</button></div>`:`<input type="file" id="ai-img" accept="${esc(CAP.img.mediaTypes.join(","))}">`}</div>`:`<p class="edit-hint">Picture upload isn't available in this view.</p>`}
+  ${CAP.img&&!A.imgUrl&&photos().length?`<select id="ai-photo" aria-label="Pick from Photos"><option value="">…or pick one from your Photos</option>${photos().map(p=>`<option value="${p.id}">${esc(p.caption||"Untitled photo")}</option>`).join("")}</select>`:""}
+  ${CAP.img?`<p class="edit-hint">${esc(PIN_TIP)}</p>`:""}
   <p class="edit-hint">If the campaign already has characters, Claude copies their stat names, number scale and rank style.</p>
   <div class="actions"><button type="button" class="btn primary" data-act="ai-gen" ${A.busy?"disabled":""}>${A.busy?"Writing the sheet…":A.imgUrl?"Create from picture":"Create character"}</button>${A.busy?`<button type="button" class="btn" data-act="ai-stop">Stop</button>`:""}</div>
   ${A.err?`<div class="note">${esc(A.err)}</div>`:""}</form>
@@ -1194,7 +1213,7 @@ function viewMat(id){
  const T=toks(id).filter(t=>dm||!t.hidden); const order=(mat.order||[]).filter(o=>T.some(t=>t.id===o.t)); const act=order.length?order[(mat.turn||0)%order.length]:null;
  const fogOf=(x,y)=>mp.fogOn&&!dm&&mp.fog[y*mp.w+x]!=="1";
  const tokHtml=T.filter(t=>!fogOf(t.x,t.y)).map(t=>{ const [h,hm]=tokHp(t); const s=num(t.size)||1; const pct=hm?Math.max(0,Math.min(100,h/hm*100)):0;
-  return `<button class="tok ${t.hidden?"hid":""} ${act&&act.t===t.id?"act":""} ${ui.matSel===t.id?"sel":""}" data-tok="${t.id}" style="left:${num(t.x)*Z+Z*.08}px;top:${num(t.y)*Z+Z*.08}px;width:${s*Z*.84}px;height:${s*Z*.84}px;background:${esc(t.color||"#7f8c8d")};font-size:${Math.max(10,Z*.32)}px" aria-label="${esc(t.name)}">${esc((t.name||"?").split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase())}${hm?`<span class="hpb"><i style="width:${pct}%"></i></span>`:""}</button>`; }).join("");
+  return `<button class="tok ${t.hidden?"hid":""} ${act&&act.t===t.id?"act":""} ${ui.matSel===t.id?"sel":""}" data-tok="${t.id}" style="left:${num(t.x)*Z+Z*.08}px;top:${num(t.y)*Z+Z*.08}px;width:${s*Z*.84}px;height:${s*Z*.84}px;${tokBg(t)};font-size:${Math.max(10,Z*.32)}px" aria-label="${esc(t.name)}">${esc((t.name||"?").split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase())}${hm?`<span class="hpb"><i style="width:${pct}%"></i></span>`:""}</button>`; }).join("");
  const sel=T.find(t=>t.id===ui.matSel);
  let selCard=`<div class="card"><span class="eyebrow">Token</span><p class="muted">Tap a token to see it. Drag to move.</p></div>`;
  if(sel){ const [h,hm]=tokHp(sel);
@@ -1238,7 +1257,7 @@ document.addEventListener("click",e=>{
  if(act==="ai-stop"){ ui.ai.ctl&&ui.ai.ctl.abort(); return; }
  if(act==="ai-noimg"){ if(ui.ai.imgUrl) URL.revokeObjectURL(ui.ai.imgUrl); ui.ai.file=null; ui.ai.imgUrl=""; render(true); return; }
  if(act==="ai-clear"){ ui.ai.result=null; render(true); return; }
- if(act==="ai-save"){ const r=ui.ai.result; if(!r) return; const k=rid(); const doc=Object.assign(newChar(),r,{campaign:ui.ai.camp,hpCur:r.hpMax,enCur:r.enMax}); put("characters",k,doc,true); ui.ai.result=null; toast("Character saved"); go("char-"+k); return; }
+ if(act==="ai-save"){ const r=ui.ai.result; if(!r) return; const k=rid(); const doc=Object.assign(newChar(),r,{campaign:ui.ai.camp,hpCur:r.hpMax,enCur:r.enMax}); put("characters",k,doc,true); attachAiPortrait(k); ui.ai.result=null; toast("Character saved"); go("char-"+k); return; }
  if(act==="new-map"){ const k=rid(); put("maps",k,newMap(),true); go("map-"+k); return; }
  if(act==="map-mat"){ saveMapNow(); newMatFor(id); return; }
  if(act==="new-mat"){ newMatFor(""); return; }
@@ -1490,6 +1509,78 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 /* DM notes: save as you type too */
 let dmTimer=null; document.addEventListener("input",e=>{ if(e.target.id!=="dmnote") return; const t=e.target; clearTimeout(dmTimer); pill("Saving…"); dmTimer=setTimeout(()=>{ t.dispatchEvent(new Event("change",{bubbles:true})); pill(S.mode==="live"?"All changes saved":"Saved in this browser"); },1000); });
 
+/* ================= photos ================= */
+const photos=()=>Object.entries(S.data.photos||{}).map(([id,p])=>Object.assign({id},p)).sort(byUpdated);
+const photo=id=>id&&S.data.photos&&S.data.photos[id]?S.data.photos[id]:null;
+const PIN_TIP="Pinterest: open the pin, right-click the image (long-press on a phone), choose Copy image, then paste here with Ctrl+V or ⌘V. Or use Save image and drop the file in.";
+function dataToBlob(d){ const [h,b]=String(d).split(","); const mime=(h.match(/data:([^;]+)/)||[])[1]||"image/jpeg"; const bin=atob(b||""); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); }
+async function shrinkImage(blob,max,limit){ max=max||720; limit=limit||150000; const url=URL.createObjectURL(blob);
+ try{ const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error("That file isn't an image this browser can open. Try a JPG or PNG (iPhone HEIC photos may need converting).")); i.src=url; });
+  const w=img.naturalWidth, h=img.naturalHeight; let scale=Math.min(1,max/Math.max(w,h)), q=.85, out="", cw=0, ch=0;
+  for(let t=0;t<10;t++){ cw=Math.max(1,Math.round(w*scale)); ch=Math.max(1,Math.round(h*scale)); const cv=document.createElement("canvas"); cv.width=cw; cv.height=ch; const x=cv.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,cw,ch); x.drawImage(img,0,0,cw,ch); out=cv.toDataURL("image/jpeg",q); if(out.length<=limit) break; if(q>.56) q-=.1; else scale*=.8; }
+  return {data:out,w:cw,h:ch}; } finally{ URL.revokeObjectURL(url); } }
+async function addPhotos(files,o){ o=o||{}; const imgs=[...files].filter(f=>f&&/^image\//.test(f.type||"image/"));
+ if(!imgs.length){ toast("Those aren't images. Try a JPG, PNG or WebP."); return []; }
+ pill("Uploading…"); const ids=[]; let fail="";
+ for(const f of imgs.slice(0,12)){ try{ const r=await shrinkImage(f); const id=rid(); const cap=String(f.name||"").replace(/\.[a-z0-9]+$/i,"").replace(/^image$/i,"").slice(0,60);
+   put("photos",id,{data:r.data,w:r.w,h:r.h,caption:cap,charId:o.charId||"",createdAt:Date.now()},true); ids.push(id); }catch(e){ fail=e.message||"An upload failed."; } }
+ if(o.charId&&o.portrait&&ids[0]){ const c=getC(o.charId); if(c){ c.portrait=ids[0]; put("characters",o.charId,c,true); } }
+ toast(fail&&!ids.length?fail:`Uploaded ${ids.length} photo${ids.length===1?"":"s"}${fail?" (one failed: "+fail+")":""}`); render("keep"); return ids; }
+function portraitOf(c){ const p=c&&photo(c.portrait); return p?p.data:""; }
+const pImg=(c,cls)=>{ const d=portraitOf(c); return d?`<img class="${cls}" src="${d}" alt="Portrait of ${esc(c.name||"character")}">`:""; };
+function tokBg(t){ const c=t.charId&&S.data.characters[t.charId]; const d=portraitOf(c); return d?`background:${esc(t.color||"#7f8c8d")} center/cover no-repeat url(${d});color:transparent`:`background:${esc(t.color||"#7f8c8d")}`; }
+function dropzone(ctx,label){ return `<div class="dropzone" data-ctx="${ctx}"><div><b>${esc(label||"Drop photos here")}</b>, paste with Ctrl+V or ⌘V, or <label class="btn small">Choose photos<input type="file" accept="image/*" multiple hidden data-upload="${ctx}"></label></div><p class="meta">${esc(PIN_TIP)}</p></div>`; }
+function photoCard(p,allowPortrait){ const C=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name))); const owner=p.charId&&S.data.characters[p.charId];
+ return `<div class="ph-card"><button class="ph-img" data-act="ph-view" data-id="${p.id}" aria-label="View larger"><img src="${p.data}" alt="${esc(p.caption||"Photo")}" loading="lazy"></button>
+ <input type="text" class="ph-cap" id="phcap-${p.id}" value="${esc(p.caption||"")}" placeholder="Add a caption" aria-label="Caption">
+ ${owner?`<a class="meta" href="#char-${p.charId}">${esc(owner.name||"Character")}${owner.portrait===p.id?" · portrait":""}</a>`:""}
+ <div class="actions"><button class="btn small primary" data-act="ph-ai" data-id="${p.id}">Make a character</button>
+ ${allowPortrait&&C.length?`<select class="ph-set" data-id="${p.id}" aria-label="Use as portrait for"><option value="">Use as portrait for…</option>${C.map(c=>`<option value="${c.id}">${esc(c.name||"Unnamed")}</option>`).join("")}</select>`:""}
+ <button class="btn small danger dm-only" data-act="ph-del" data-id="${p.id}">Delete</button></div></div>`; }
+function viewPhotos(){ const P=photos();
+ return `<section class="section"><div class="section-head"><h2>Photos</h2><span class="muted">${P.length}</span></div>
+ <p class="lede">Upload art, Pinterest finds, sketches or table photos. Turn any of them into a character with AI, or use them as portraits and play mat tokens.</p>
+ ${dropzone("album")}
+ ${loading()?`<p class="muted">Opening the codex…</p>`:P.length?`<div class="ph-grid">${P.map(p=>photoCard(p,true)).join("")}</div>`:emptyBox("No photos yet","Drop or paste your first picture above.",null,"")}</section>`; }
+function charPhotos(id,c){ const P=photos().filter(p=>p.charId===id);
+ return `<div class="section"><div class="section-head"><h2>Photos</h2><span class="muted">${P.length}</span></div>
+  ${dropzone("char:"+id,"Add photos of "+(c.name||"this character"))}
+  ${P.length?`<div class="ph-grid">${P.map(p=>`<div class="ph-card"><button class="ph-img" data-act="ph-view" data-id="${p.id}" aria-label="View larger"><img src="${p.data}" alt="${esc(p.caption||"Photo")}" loading="lazy"></button><div class="actions">${c.portrait===p.id?`<span class="tag">Portrait</span>`:`<button class="btn small" data-act="ph-portrait" data-id="${p.id}" data-c="${id}">Make portrait</button>`}</div></div>`).join("")}</div>`:""}</div>`; }
+function portraitEditor(id,c){ const P=photos();
+ return `<div class="fieldset"><h3>Portrait</h3><div class="row" style="align-items:flex-start;gap:16px">${portraitOf(c)?pImg(c,"portrait"):`<div class="portrait empty">No portrait</div>`}
+  <div style="display:grid;gap:8px;min-width:0;flex:1">${dropzone("portrait:"+id,"Drop a portrait here")}
+  ${P.length?`<select class="ph-pick" data-c="${id}" aria-label="Pick from Photos"><option value="">…or pick one from Photos</option>${P.map(p=>`<option value="${p.id}" ${c.portrait===p.id?"selected":""}>${esc(p.caption||"Untitled photo")}</option>`).join("")}</select>`:""}
+  ${c.portrait?`<div><button type="button" class="btn small" data-act="ph-unset" data-c="${id}">Remove portrait</button></div>`:""}</div></div></div>`; }
+async function attachAiPortrait(cid){ const A=ui.ai; try{
+  if(A.photoId&&photo(A.photoId)){ const c=getC(cid); c.portrait=A.photoId; put("characters",cid,c,true); const p=clone(S.data.photos[A.photoId]); if(!p.charId){ p.charId=cid; put("photos",A.photoId,p,true); } }
+  else if(A.file){ await addPhotos([A.file],{charId:cid,portrait:true}); } }catch(e){} A.photoId=""; }
+function openLightbox(d,cap){ const o=document.createElement("div"); o.className="lightbox"; o.setAttribute("role","dialog"); o.innerHTML=`<img src="${d}" alt="${esc(cap||"Photo")}"><p>${esc(cap||"")}</p><span class="meta">Click anywhere to close</span>`; o.addEventListener("click",()=>o.remove()); document.body.appendChild(o); }
+function handleUpload(ctx,files){ if(!files||!files.length) return; const [kind,id]=String(ctx).split(":");
+ if(kind==="album") addPhotos(files); else if(kind==="char") addPhotos(files,{charId:id}); else if(kind==="portrait") addPhotos(files,{charId:id,portrait:true}); }
+document.addEventListener("change",e=>{ const t=e.target;
+ if(t.dataset&&t.dataset.upload){ handleUpload(t.dataset.upload,t.files); t.value=""; return; }
+ if(t.classList&&t.classList.contains("ph-set")&&t.value){ const c=getC(t.value), pid=t.dataset.id; if(c){ c.portrait=pid; put("characters",t.value,c,true); const p=clone(S.data.photos[pid]); if(!p.charId){ p.charId=t.value; put("photos",pid,p,true); } toast(`Portrait set for ${c.name||"them"}`); render("keep"); } return; }
+ if(t.classList&&t.classList.contains("ph-pick")){ const c=getC(t.dataset.c); if(c){ c.portrait=t.value||""; put("characters",t.dataset.c,c,true); render("keep"); } return; }
+ if(t.classList&&t.classList.contains("ph-cap")){ const id=t.id.replace("phcap-",""); const p=S.data.photos[id]&&clone(S.data.photos[id]); if(p&&p.caption!==t.value){ p.caption=t.value.slice(0,80); put("photos",id,p,true); } return; }
+ if(t.id==="ai-photo"){ const p=photo(t.value); if(p){ ui.ai.file=dataToBlob(p.data); ui.ai.imgUrl=p.data; ui.ai.photoId=t.value; render(true); } return; }
+});
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act, id=b.dataset.id;
+ if(act==="ph-view"){ const p=photo(id); if(p) openLightbox(p.data,p.caption); return; }
+ if(act==="ph-ai"){ const p=photo(id); if(!p) return; ui.ai.file=dataToBlob(p.data); ui.ai.imgUrl=p.data; ui.ai.photoId=id; ui.ai.result=null; ui.ai.err=""; go("ai-char"); return; }
+ if(act==="ph-portrait"){ const c=getC(b.dataset.c); if(c){ c.portrait=id; put("characters",b.dataset.c,c,true); render("keep"); toast("Portrait updated"); } return; }
+ if(act==="ph-unset"){ const c=getC(b.dataset.c); if(c){ c.portrait=""; put("characters",b.dataset.c,c,true); render("keep"); } return; }
+ if(act==="ph-del"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again"; return; } del("photos",id); chars().filter(c=>c.portrait===id).forEach(c=>{ const cc=getC(c.id); cc.portrait=""; put("characters",c.id,cc,true); }); toast("Photo deleted"); render("keep"); return; }
+});
+document.addEventListener("dragover",e=>{ const z=e.target.closest&&e.target.closest(".dropzone"); if(!z) return; e.preventDefault(); z.classList.add("over"); });
+document.addEventListener("dragleave",e=>{ const z=e.target.closest&&e.target.closest(".dropzone"); if(z) z.classList.remove("over"); });
+document.addEventListener("drop",e=>{ const z=e.target.closest&&e.target.closest(".dropzone"); if(!z) return; e.preventDefault(); z.classList.remove("over"); handleUpload(z.dataset.ctx,e.dataTransfer&&e.dataTransfer.files); });
+document.addEventListener("paste",e=>{ const files=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>/^image\//.test(f.type)); if(!files.length) return;
+ const h=location.hash.slice(1); let m;
+ if(h==="photos"){ e.preventDefault(); addPhotos(files); }
+ else if(h==="ai-char"){ e.preventDefault(); ui.ai.file=files[0]; ui.ai.imgUrl=URL.createObjectURL(files[0]); ui.ai.photoId=""; render(true); toast("Picture added. Describe them or just click Create."); }
+ else if((m=h.match(/^char-(\w+)$/))){ e.preventDefault(); addPhotos(files,{charId:m[1]}); }
+ else if((m=h.match(/^edit-char-(\w+)$/))){ e.preventDefault(); addPhotos(files,{charId:m[1],portrait:true}); } });
+
 /* ================= render & routing ================= */
 function render(force){
  if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
@@ -1511,6 +1602,7 @@ function render(force){
  else if((m=h.match(/^map-(\w+)$/))){html=viewMap(m[1]);nav="maps";}
  else if(h==="playmat"){html=viewMats();nav="playmat";}
  else if(h==="shops"){html=viewShops();nav="shops";}
+ else if(h==="photos"){html=viewPhotos();nav="photos";}
  else if((m=h.match(/^edit-shop-(\w+)$/))){html=editShop(m[1]);nav="shops";ui.editing=true;}
  else if((m=h.match(/^shop-(\w+)$/))){html=viewShop(m[1]);nav="shops";}
  else if((m=h.match(/^mat-(\w+)$/))){html=viewMat(m[1]);nav="playmat";}
