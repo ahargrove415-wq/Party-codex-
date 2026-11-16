@@ -337,6 +337,10 @@ body.player .dm-only{display:none!important}
 .coin-inputs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 .coin-in{display:grid;gap:4px;min-width:0}.coin-in input{width:100%;min-width:0}
 @media (max-width:640px){.coin-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.usd{display:inline-flex;align-items:center;font-size:.78rem;font-weight:600;padding:1px 8px;border-radius:99px;background:rgba(46,139,87,.13);color:#2e7d4f;border:1px solid rgba(46,139,87,.35);white-space:nowrap}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .usd{color:#7fd4a0}}
+:root[data-theme="dark"] .usd{color:#7fd4a0}
+.usd-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px}
 </style>
 
 <header class="top"><div class="top-in">
@@ -1729,17 +1733,20 @@ const COINS=[["platinum","Platinum"],["diamond","Diamond"],["gold","Gold"],["sil
 const COIN_DEF=[10,25,50,100]; // 10 Bronze = 1 Silver, 25 Silver = 1 Gold, 50 Gold = 1 Diamond, 100 Diamond = 1 Platinum
 function coinSteps(){ const s=S.data.settings&&S.data.settings.coins; const r=(s&&Array.isArray(s.steps))?s.steps:COIN_DEF; return [0,1,2,3].map(i=>Math.max(1,Math.round(num(r[i])||COIN_DEF[i]))); }
 function coinVals(){ const [bs,sg,gd,dp]=coinSteps(); return {bronze:1,silver:bs,gold:bs*sg,diamond:bs*sg*gd,platinum:bs*sg*gd*dp}; } // worth in Bronze
-function coinValues(){ const v=coinVals(); const o={}; for(const k in v) o[k]=v[k]/v.gold; return o; } // worth in Gold (money is stored in Gold)
+function coinUsd(){ const s=S.data.settings&&S.data.settings.coins; const u=num(s&&s.usd); return u>0?u:0.01; } // dollars per Bronze
+function coinValues(){ const v=coinVals(); const o={}; for(const k in v) o[k]=v[k]/v.gold; o.usd=1/(coinUsd()*v.gold); return o; }
+function usdOf(gold){ return num(gold)*coinVals().gold*coinUsd(); }
+function usdText(gold){ const d=Math.round(usdOf(gold)*100)/100; return "$"+d.toLocaleString("en-US",{minimumFractionDigits:d%1?2:0,maximumFractionDigits:2}); } // worth in Gold (money is stored in Gold)
 function coinsOf(gold){ const v=coinVals(); let u=Math.max(0,Math.round(num(gold)*v.gold)); const out=[];
  for(const [k] of COINS){ const n=Math.floor(u/v[k]); if(n){ out.push([k,n]); u-=n*v[k]; } } return out; }
 const coinName=k=>(COINS.find(x=>x[0]===k)||[k,k])[1];
-function coinText(gold){ const c=coinsOf(gold); return c.length?c.map(([k,n])=>`${fmt(n)} ${coinName(k)}`).join(", "):"0 Gold"; }
-function coinHTML(gold){ const c=coinsOf(gold); return `<span class="coins" title="${esc(coinText(gold))}">${(c.length?c:[["gold",0]]).map(([k,n])=>`<span class="coin c-${k}" aria-label="${fmt(n)} ${coinName(k)}"><i></i>${fmt(n)}</span>`).join("")}</span>`; }
+function coinText(gold){ const c=coinsOf(gold); return (c.length?c.map(([k,n])=>`${fmt(n)} ${coinName(k)}`).join(", "):"0 Gold")+` (${usdText(gold)})`; }
+function coinHTML(gold){ const c=coinsOf(gold); return `<span class="coins" title="${esc(coinText(gold))}">${(c.length?c:[["gold",0]]).map(([k,n])=>`<span class="coin c-${k}" aria-label="${fmt(n)} ${coinName(k)}"><i></i>${fmt(n)}</span>`).join("")}<span class="usd" aria-label="${usdText(gold)} in US dollars">${usdText(gold)}</span></span>`; }
 function parseCoins(str){ const s=String(str==null?"":str).trim().toLowerCase(); if(!s) return 0; if(/^-?[\d,.]+$/.test(s)) return num(s); const vals=coinValues(); let t=0, any=false;
- s.replace(/([\d,.]+)\s*(platinum|plat|pp|p|diamonds?|dia|dp|d|gold|gp|g|silver|sp|s|bronze|bp|b|copper|cp|c)\b/g,(m,n,u)=>{ any=true; const k=/^p/.test(u)?"platinum":/^d/.test(u)?"diamond":/^g/.test(u)?"gold":/^s/.test(u)?"silver":"bronze"; t+=num(n)*vals[k]; return m; });
+ s.replace(/\$\s*([\d,.]+)/g,"$1usd").replace(/([\d,.]+)\s*(usd|dollars?|platinum|plat|pp|p|diamonds?|dia|dp|d|gold|gp|g|silver|sp|s|bronze|bp|b|copper|cp|c)\b/g,(m,n,u)=>{ any=true; const k=/^(usd|dollar)/.test(u)?"usd":/^p/.test(u)?"platinum":/^d/.test(u)?"diamond":/^g/.test(u)?"gold":/^s/.test(u)?"silver":"bronze"; t+=num(n)*vals[k]; return m; });
  return any?Math.round(t*10000)/10000:num(s); }
 const isCoinCur=c=>/^(gold|coins?|money|gp|)$/i.test(String(c==null?"":c).trim());
-const coinSelect=id=>`<select id="${id}" aria-label="Coin type">${COINS.map(([k,n])=>`<option value="${k}" ${k==="gold"?"selected":""}>${n}</option>`).join("")}</select>`;
+const coinSelect=id=>`<select id="${id}" aria-label="Coin type">${COINS.map(([k,n])=>`<option value="${k}" ${k==="gold"?"selected":""}>${n}</option>`).join("")}<option value="usd">$ USD</option></select>`;
 function coinFields(gold){ const have=Object.fromEntries(coinsOf(gold)); return `<div class="fld wide"><span>Money</span><div class="coin-inputs">${COINS.map(([k,n])=>`<label class="coin-in"><span class="coin c-${k}"><i></i>${n}</span><input type="number" min="0" step="1" id="f-coin-${k}" value="${have[k]||0}" aria-label="${n}"></label>`).join("")}</div></div>`; }
 function coinsFromForm(fallback){ if(!$("#f-coin-gold")) return num(fallback); const vals=coinValues(); let t=0; COINS.forEach(([k])=>{ t+=num(v("f-coin-"+k))*vals[k]; }); return Math.round(t*10000)/10000; }
 function coinSection(){ const r=coinSteps(), dm=isDM(), val=coinVals(); const pairs=[["bronze","silver"],["silver","gold"],["gold","diamond"],["diamond","platinum"]];
@@ -1747,11 +1754,13 @@ function coinSection(){ const r=coinSteps(), dm=isDM(), val=coinVals(); const pa
  return `<section class="section"><div class="section-head"><h2>Coins</h2></div><div class="split"><div class="card" style="gap:12px">
   <div class="ladder">${["bronze","silver","gold","diamond","platinum"].map((k,i)=>`${i?'<span class="arrow">→</span>':""}${chip(k)}`).join("")}</div>
   <ul class="clean">${pairs.map(([a,b],i)=>`<li class="row" style="gap:8px">${dm?`<input type="number" min="1" id="coin-step-${i}" value="${r[i]}" style="width:5.5em" aria-label="${coinName(a)} per ${coinName(b)}">`:`<b class="mono">${fmt(r[i])}</b>`} ${chip(a)} = 1 ${chip(b)}</li>`).join("")}</ul>
+  <div class="row" style="gap:8px;flex-wrap:wrap"><b>US dollars:</b> 1 ${chip("bronze")} = $${dm?`<input type="number" min="0.0001" step="0.01" id="coin-usd" value="${coinUsd()}" style="width:6em" aria-label="Dollars per Bronze">`:`<b class="mono">${coinUsd()}</b>`}</div>
+  <ul class="clean usd-list">${["bronze","silver","gold","diamond","platinum"].map(k=>`<li class="row" style="gap:8px">1 ${chip(k)} = <b class="mono">${usdText(coinValues()[k])}</b></li>`).join("")}</ul>
   ${dm?`<div class="actions"><button class="btn primary small" data-act="coins-save">Save rates</button><button class="btn small" data-act="coins-reset">Back to 10 · 25 · 50 · 100</button></div>`:""}</div>
-  <div class="prose"><p>Money is shown in coins everywhere: sheets, shops and mission rewards. 1 Gold is ${fmt(val.gold)} Bronze, 1 Diamond is ${fmt(val.diamond/val.gold)} Gold, and 1 Platinum is ${fmt(val.platinum/val.gold)} Gold.</p><p class="muted">In shop prices you can type coins directly, like <b>5s</b>, <b>2d 30g</b> or <b>1p</b>. Plain numbers count as Gold.</p></div></div></section>`; }
+  <div class="prose"><p>Money is shown in coins everywhere: sheets, shops and mission rewards. 1 Gold is ${fmt(val.gold)} Bronze, 1 Diamond is ${fmt(val.diamond/val.gold)} Gold, and 1 Platinum is ${fmt(val.platinum/val.gold)} Gold.</p><p class="muted">In shop prices you can type coins directly, like <b>5s</b>, <b>2d 30g</b> or <b>1p</b>. Plain numbers count as Gold. Dollars work too: <b>$20</b> or <b>20 usd</b>.</p></div></div></section>`; }
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return;
- if(b.dataset.act==="coins-save"){ const steps=[0,1,2,3].map(i=>Math.max(1,Math.round(num(v("coin-step-"+i))||COIN_DEF[i]))); put("settings","coins",{steps},true); render(true); toast("Coin rates saved"); }
- if(b.dataset.act==="coins-reset"){ put("settings","coins",{steps:COIN_DEF.slice()},true); render(true); toast("Back to 10 · 25 · 50 · 100"); } });
+ if(b.dataset.act==="coins-save"){ const steps=[0,1,2,3].map(i=>Math.max(1,Math.round(num(v("coin-step-"+i))||COIN_DEF[i]))); const usd=num(v("coin-usd"))>0?num(v("coin-usd")):0.01; put("settings","coins",{steps,usd},true); render(true); toast("Coin rates saved"); }
+ if(b.dataset.act==="coins-reset"){ put("settings","coins",{steps:COIN_DEF.slice(),usd:0.01},true); render(true); toast("Back to 10 · 25 · 50 · 100, 1 Bronze = 1¢"); } });
 
 /* ================= render & routing ================= */
 function render(force){
