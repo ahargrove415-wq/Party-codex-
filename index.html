@@ -353,6 +353,27 @@ body.player .dm-only{display:none!important}
 .m-chart td.same{opacity:.4}
 .m-purse .num{text-align:right}
 .m-purse tfoot th,.m-purse tfoot td{font-weight:700;border-bottom:0}
+.tb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start}
+.tb-card{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);min-width:0}
+.tb-head{display:flex;gap:10px;align-items:center}
+.tb-ph{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
+.tb-ini{display:grid;place-items:center;font-weight:700;background:var(--line)}
+.tb-title{display:flex;flex-direction:column;min-width:0;flex:1}
+.tb-title b{font-size:1.05rem}
+.tb-title .muted{font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-x{flex:none}
+.tb-card .adj{flex-wrap:wrap}
+.tb-card .adj select{max-width:7.5em}
+.tb-pts{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.tb-pts span{display:inline-flex;align-items:center;gap:4px}
+.tb-buffs{display:flex;flex-wrap:wrap;gap:4px}
+.tb-buffs .tag.neg{color:#c0392b}
+.tb-sec{border-top:1px solid var(--line);padding-top:8px}
+.tb-sec summary{cursor:pointer;font-weight:600}
+.tb-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;margin-top:8px}
+.tb-stats div{display:flex;justify-content:space-between;gap:6px;font-size:.88rem}
+.tb-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:.88rem;max-height:320px;overflow:auto}
+.tb-bar{margin-bottom:14px}
 </style>
 
 <header class="top"><div class="top-in">
@@ -365,6 +386,7 @@ body.player .dm-only{display:none!important}
     <a href="#worlds" data-v="worlds">Worlds</a>
     <a href="#maps" data-v="maps">Maps</a>
     <a href="#playmat" data-v="playmat">Play mat</a>
+    <a href="#table" data-v="table" class="dm-only">Table</a>
     <a href="#shops" data-v="shops">Shops</a>
     <a href="#money" data-v="money">Money</a>
     <a href="#tools" data-v="tools">Dice &amp; rules</a>
@@ -591,7 +613,7 @@ function viewChar(id){
  </aside>`;
  return `<a href="#characters" class="muted">← All characters</a>
  <section class="sheet-head"><span class="eyebrow">${W?`<a href="#world-${W.id}">${esc(c.campaign)}</a>`:esc(c.campaign||"No campaign")}${c.player?" · played by "+esc(c.player):""}</span>
-  <div class="row" style="justify-content:space-between"><div class="sheet-title">${portraitOf(c)?`<button class="ph-img" data-act="ph-view" data-id="${c.portrait}" aria-label="View portrait">${pImg(c,"portrait")}</button>`:""}<h1>${esc(c.name||"Unnamed character")}</h1></div><a class="btn" href="#edit-char-${id}">Edit sheet</a></div>
+  <div class="row" style="justify-content:space-between"><div class="sheet-title">${portraitOf(c)?`<button class="ph-img" data-act="ph-view" data-id="${c.portrait}" aria-label="View portrait">${pImg(c,"portrait")}</button>`:""}<h1>${esc(c.name||"Unnamed character")}</h1></div><div class="actions"><button class="btn dm-only" data-act="tbl-add" data-c="${id}">${tblIds().includes(id)?"On the table ✓":"Add to table"}</button><a class="btn" href="#edit-char-${id}">Edit sheet</a></div></div>
   <div class="row">${c.race?`<span class="tag">${esc(c.race)}</span>`:""}${c.cls?`<span class="tag">${esc(c.cls)}</span>`:""}<span class="tag mono">Lv ${fmt(c.level)}${c.levelCap?" / "+esc(c.levelCap):""}</span>${used.map(t=>`<a class="tag" href="#tree-${t.id}">Tree: ${esc(t.name||"Untitled")}</a>`).join("")}</div>
   ${c.bio?`<p class="lede">${esc(c.bio)}</p>`:""}</section>
  <div class="sheet"><div class="section" style="min-width:0">
@@ -1804,6 +1826,58 @@ document.addEventListener("input",e=>{ const t=e.target; if(!t||!/^mc-(amt|unit|
  if(t.id==="mc-amt") ui.money.amt=t.value; if(t.id==="mc-unit") ui.money.unit=t.value; if(t.id==="mc-n") ui.money.n=t.value;
  const o=$("#mc-out"); if(o) o.innerHTML=moneyResults(); });
 document.addEventListener("change",e=>{ if(e.target&&e.target.id==="mc-unit"&&ui.money){ ui.money.unit=e.target.value; const o=$("#mc-out"); if(o) o.innerHTML=moneyResults(); } });
+/* ================= DM table: several character sheets open at once ================= */
+const TBL_KEY="codex2:table";
+function tblIds(){ if(!ui.tbl){ let a=[]; try{ a=JSON.parse(localStorage.getItem(TBL_KEY)||"[]"); }catch(_){} ui.tbl=Array.isArray(a)?a:[]; } return ui.tbl; }
+function tblSave(){ try{ localStorage.setItem(TBL_KEY,JSON.stringify(ui.tbl||[])); }catch(_){} }
+function tblAdd(ids){ const L=tblIds(); ids.forEach(i=>{ if(i&&!L.includes(i)) L.push(i); }); tblSave(); }
+function trkIn(b,key){ const sc=b&&b.closest&&b.closest("[data-scope]"); return (sc&&sc.querySelector(`[data-in="${key}"]`))||$("#"+key)||{value:""}; }
+ui.tblOpen=ui.tblOpen||{};
+function tblBuffChips(c){ const agg=buffAgg(c); return Object.values(agg).flatMap(a=>[a.flat?`${a.flat>0?"+":"−"}${fmt(Math.abs(a.flat))} ${a.label}`:null,a.pct?`${a.pct>0?"+":"−"}${Math.abs(a.pct)}% ${a.label}`:null]).filter(Boolean); }
+function tblDetails(cid,key,title,count,body){ const k=cid+":"+key; return `<details class="tb-sec" data-tk="${k}" ${ui.tblOpen[k]?"open":""}><summary>${title}${count!=null?` <span class="muted">${count}</span>`:""}</summary>${body}</details>`; }
+function tblCard(id){ const c=getC(id); if(!c) return "";
+ const stats=(c.stats||[]).filter(s=>s.k||s.v), bc=tblBuffChips(c), temp=(c.buffs||[]).filter(b=>b&&(b.turns===""||b.turns==null||num(b.turns)>0));
+ const inp=(key,ph,w)=>`<input type="number" data-in="${key}" placeholder="${ph}" aria-label="${esc(c.name||"Character")} ${ph}" style="width:${w||"80px"}">`;
+ return `<article class="tb-card" data-scope="${id}" aria-label="${esc(c.name||"Unnamed character")}">
+  <header class="tb-head">${portraitOf(c)?pImg(c,"tb-ph"):`<span class="tb-ph tb-ini" aria-hidden="true">${esc(String(c.name||"?").trim().charAt(0).toUpperCase()||"?")}</span>`}
+   <div class="tb-title"><a href="#char-${id}"><b>${esc(c.name||"Unnamed character")}</b></a><span class="muted">${[c.race,c.cls].filter(Boolean).map(esc).join(" · ")}${c.race||c.cls?" · ":""}Lv ${fmt(c.level)}${c.player?" · "+esc(c.player):""}</span></div>
+   <button class="btn small ghost tb-x" data-act="tbl-del" data-c="${id}" aria-label="Close ${esc(c.name||"this sheet")}" title="Close">✕</button></header>
+  ${c.hpMax?`${meter("hp","HP",c.hpCur,effMax(c,"hp"))}<div class="adj">${inp("hpAmt","HP")}<button class="btn small" data-act="hp-" data-c="${id}">Damage</button><button class="btn small" data-act="hp+" data-c="${id}">Heal</button></div>`:""}
+  ${c.enMax?`${meter("mp",c.enLabel||"MP",c.enCur,effMax(c,"en"))}<div class="adj">${inp("enAmt",c.enLabel||"MP")}<button class="btn small" data-act="en-" data-c="${id}">Spend</button><button class="btn small" data-act="en+" data-c="${id}">Restore</button></div>`:""}
+  ${(c.hpMax||c.enMax)?`<button class="btn small" data-act="rest" data-c="${id}">Full rest</button>`:""}
+  ${meter("xp","EXP",c.exp,c.expPer)}
+  <div class="adj">${inp("xpAmt","EXP")}<button class="btn small" data-act="xp" data-c="${id}">Add EXP</button></div>
+  <div class="tb-pts"><span>Skill pts <button class="btn small" data-act="sp" data-v="-1" data-c="${id}" aria-label="Remove a skill point">−</button><b class="mono">${fmt(c.sp)}</b><button class="btn small" data-act="sp" data-v="1" data-c="${id}" aria-label="Add a skill point">+</button></span>
+   <span>Stat pts <button class="btn small" data-act="st" data-v="-1" data-c="${id}" aria-label="Remove a stat point">−</button><b class="mono">${fmt(c.stat)}</b><button class="btn small" data-act="st" data-v="1" data-c="${id}" aria-label="Add a stat point">+</button></span></div>
+  <div class="row" style="justify-content:space-between;align-items:center;gap:6px"><span>Money</span>${coinHTML(c.money)}</div>
+  <div class="adj">${inp("moneyAmt","Amt")}<select data-in="moneyCoin" aria-label="Coin type">${COINS.map(([k,n])=>`<option value="${k}" ${k==="gold"?"selected":""}>${n}</option>`).join("")}<option value="usd">$ USD</option></select><button class="btn small" data-act="money+" data-c="${id}">Add</button><button class="btn small" data-act="money-" data-c="${id}">Spend</button></div>
+  ${bc.length||temp.length?`<div class="tb-buffs">${bc.map(t=>`<span class="tag ${/^−/.test(t)?"neg":""}">${esc(t)}</span>`).join("")}${temp.map(b=>`<span class="tag muted">${esc(b.name||"Buff")}${b.turns!==""&&b.turns!=null?` · ${fmt(b.turns)} turns`:""}</span>`).join("")}</div>`:""}
+  ${stats.length?tblDetails(id,"stats","Stats",null,`<div class="tb-stats">${stats.map(s=>`<div><span class="muted">${esc(s.k)}</span><b class="mono">${statCell(c,s)}</b></div>`).join("")}</div>`):""}
+  ${(c.moves||[]).length?tblDetails(id,"moves","Moves &amp; spells",c.moves.length,`<ul class="tb-list">${c.moves.map(m=>`<li><b>${esc(m.name||"Move")}</b>${(m.cost||m.dmg)?` <span class="mono muted">${m.cost?"Cost "+esc(m.cost):""}${m.cost&&m.dmg?" · ":""}${m.dmg?"Dmg "+esc(m.dmg):""}</span>`:""}${m.desc?`<div class="muted">${esc(m.desc)}</div>`:""}</li>`).join("")}</ul>`):""}
+  ${(c.skills||[]).length?tblDetails(id,"skills","Skills",c.skills.length,`<ul class="tb-list">${c.skills.map(s=>`<li>${chip(s.rank)} <b>${esc(s.name||"Skill")}</b>${s.desc?`<div class="muted">${esc(s.desc)}</div>`:""}</li>`).join("")}</ul>`):""}
+  ${(c.items||[]).length?tblDetails(id,"items","Items",c.items.length,`<ul class="tb-list">${c.items.map(i=>`<li><b>${esc(i.name||"Item")}</b>${truthy(i.equipped)?` <span class="tag">Equipped</span>`:""}${i.buff?` <span class="mono muted">${esc(buffText(i.buff))}</span>`:""}${i.desc?`<div class="muted">${esc(i.desc)}</div>`:""}</li>`).join("")}</ul>`):""}
+  <a class="btn small" href="#char-${id}">Open full sheet</a>
+ </article>`; }
+function viewTable(){
+ if(!isDM()) return `<section class="section"><div class="section-head"><h2>Table</h2></div>${emptyBox("DM only","The table lets the DM keep several character sheets open at once during a session. Switch to DM mode to use it.",null,"")}</section>`;
+ const L=tblIds().filter(i=>getC(i)); const all=chars().sort((a,b)=>String(a.name).localeCompare(String(b.name))); const rest=all.filter(c=>!L.includes(c.id));
+ const camps=[...new Set(all.map(c=>c.campaign).filter(Boolean))].sort();
+ const groups=[...camps,""].map(k=>{ const g=rest.filter(c=>(c.campaign||"")===k); return g.length?`<optgroup label="${esc(k||"No campaign")}">${g.map(c=>`<option value="${c.id}">${esc(c.name||"Unnamed")}</option>`).join("")}</optgroup>`:""; }).join("");
+ return `<section class="section"><div class="section-head"><h2>Table</h2><span class="meta">Keep several sheets open during a session. Damage, healing, EXP and money save for everyone right away.</span></div>
+ <div class="card tb-bar"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+  <label class="fld"><span>Open a sheet</span><select id="tbl-pick"><option value="">Choose a character…</option>${groups}</select></label>
+  <button class="btn primary" data-act="tbl-add">Open</button>
+  ${camps.length?`<label class="fld"><span>Or a whole party</span><select id="tbl-camp"><option value="">Choose a campaign…</option>${camps.map(k=>`<option>${esc(k)}</option>`).join("")}</select></label><button class="btn" data-act="tbl-camp">Open party</button>`:""}
+  ${L.length?`<button class="btn" data-act="tbl-clear">Close all</button>`:""}
+ </div></div>
+ ${loading()?`<p class="muted">Opening the codex…</p>`:L.length?`<div class="tb-grid">${L.map(tblCard).join("")}</div>`:emptyBox("No sheets open","Pick characters above, or open a whole campaign's party at once. You can also press “Add to table” on any character sheet.",null,"")}</section>`; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const a=b.dataset.act;
+ if(a==="tbl-add"){ const id=b.dataset.c||v("tbl-pick"); if(!id){ toast("Choose a character first"); return; } tblAdd([id]); if(b.dataset.c){ toast(`${(getC(id)||{}).name||"Character"} is on the table`); render("keep"); } else render("keep"); return; }
+ if(a==="tbl-camp"){ const k=v("tbl-camp"); if(!k){ toast("Choose a campaign first"); return; } const ids=chars().filter(c=>c.campaign===k).map(c=>c.id); tblAdd(ids); toast(`Opened ${ids.length} sheet${ids.length===1?"":"s"}`); render("keep"); return; }
+ if(a==="tbl-del"){ ui.tbl=tblIds().filter(i=>i!==b.dataset.c); tblSave(); render("keep"); return; }
+ if(a==="tbl-clear"){ ui.tbl=[]; tblSave(); render("keep"); return; }
+});
+document.addEventListener("toggle",e=>{ const d=e.target; if(d&&d.dataset&&d.dataset.tk) ui.tblOpen[d.dataset.tk]=d.open; },true);
 /* ================= render & routing ================= */
 function render(force){
  if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
@@ -1820,6 +1894,7 @@ function render(force){
  else if((m=h.match(/^edit-world-(\w+)$/))){html=editWorld(m[1]);nav="worlds";ui.editing=true;}
  else if((m=h.match(/^world-(\w+)$/))){html=viewWorld(m[1]);nav="worlds";}
  else if(h==="tools"){html=viewTools();nav="tools";}
+ else if(h==="table"){html=viewTable();nav="table";}
  else if(h==="money"){html=viewMoney();nav="money";}
  else if(h==="ai-char"){html=viewAiChar();nav="characters";}
  else if(h==="maps"){html=viewMaps();nav="maps";}
@@ -1898,13 +1973,13 @@ document.addEventListener("click",e=>{
  if(act==="save-costs"){ const rows=collect("costs").filter(r=>r.rank).map(r=>({rank:r.rank,cost:num(r.cost)})); put("settings","rules",{costs:rows},true); render(true); toast("Costs saved"); return; }
  if(act==="reset-costs"){ put("settings","rules",{costs:DEFAULT_COSTS.map(([r,c])=>({rank:r,cost:c}))},true); render(true); toast("Default costs restored"); return; }
  const cid=b.dataset.c; if(!cid) return; const c=getC(cid); if(!c) return;
- if(act==="hp-"||act==="hp+"){ const a=Math.abs(num($("#hpAmt").value)); if(!a){toast("Type an amount first");return;} c.hpCur=Math.max(0,Math.min(effMax(c,"hp"),num(c.hpCur)+(act==="hp+"?a:-a))); }
- else if(act==="en-"||act==="en+"){ const a=Math.abs(num($("#enAmt").value)); if(!a){toast("Type an amount first");return;} c.enCur=Math.max(0,Math.min(effMax(c,"en"),num(c.enCur)+(act==="en+"?a:-a))); }
+ if(act==="hp-"||act==="hp+"){ const a=Math.abs(num(trkIn(b,"hpAmt").value)); if(!a){toast("Type an amount first");return;} c.hpCur=Math.max(0,Math.min(effMax(c,"hp"),num(c.hpCur)+(act==="hp+"?a:-a))); }
+ else if(act==="en-"||act==="en+"){ const a=Math.abs(num(trkIn(b,"enAmt").value)); if(!a){toast("Type an amount first");return;} c.enCur=Math.max(0,Math.min(effMax(c,"en"),num(c.enCur)+(act==="en+"?a:-a))); }
  else if(act==="rest"){ c.hpCur=effMax(c,"hp"); c.enCur=effMax(c,"en"); toast("Back to full"); }
- else if(act==="xp"){ const a=b.dataset.v?num(b.dataset.v):num($("#xpAmt").value); if(!a){toast("Type an amount of EXP first");return;} c.exp=num(c.exp)+a; let ups=0; const per=num(c.expPer)||100;
+ else if(act==="xp"){ const a=b.dataset.v?num(b.dataset.v):num(trkIn(b,"xpAmt").value); if(!a){toast("Type an amount of EXP first");return;} c.exp=num(c.exp)+a; let ups=0; const per=num(c.expPer)||100;
   while(c.exp>=per){ c.exp-=per; c.level=num(c.level)+1; c.sp=num(c.sp)+num(c.gainSp); c.stat=num(c.stat)+num(c.gainStat); ups++; }
   toast(ups?`Level up! Now level ${c.level}: +${fmt(num(c.gainSp)*ups)} skill points, +${fmt(num(c.gainStat)*ups)} stat points`:`+${a} EXP`); }
- else if(act==="money+"||act==="money-"){ const a=Math.abs(num($("#moneyAmt").value)); if(!a){toast("Type an amount first");return;} { const amt=a*coinValues()[v("moneyCoin")||"gold"]; c.money=Math.max(0,Math.round((num(c.money)+(act==="money+"?amt:-amt))*10000)/10000); } }
+ else if(act==="money+"||act==="money-"){ const a=Math.abs(num(trkIn(b,"moneyAmt").value)); if(!a){toast("Type an amount first");return;} { const amt=a*coinValues()[trkIn(b,"moneyCoin").value||"gold"]; c.money=Math.max(0,Math.round((num(c.money)+(act==="money+"?amt:-amt))*10000)/10000); } }
  else if(act==="sp"){ c.sp=Math.max(0,num(c.sp)+num(b.dataset.v)); }
  else if(act==="st"){ c.stat=Math.max(0,num(c.stat)+num(b.dataset.v)); }
  else return;
