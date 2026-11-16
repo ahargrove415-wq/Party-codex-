@@ -341,6 +341,18 @@ body.player .dm-only{display:none!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .usd{color:#7fd4a0}}
 :root[data-theme="dark"] .usd{color:#7fd4a0}
 .usd-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px}
+.m-conv{gap:14px}
+.m-out,.m-split{padding-top:12px;border-top:1px solid var(--line)}
+.m-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.m-eq{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.m-big{font-size:1.25rem;font-weight:600;word-break:break-all}
+.table-wrap{overflow-x:auto;max-width:100%}
+.m-chart,.m-purse{border-collapse:collapse;width:100%;font-size:.92rem}
+.m-chart th,.m-chart td,.m-purse th,.m-purse td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.m-chart td{text-align:right}
+.m-chart td.same{opacity:.4}
+.m-purse .num{text-align:right}
+.m-purse tfoot th,.m-purse tfoot td{font-weight:700;border-bottom:0}
 </style>
 
 <header class="top"><div class="top-in">
@@ -354,6 +366,7 @@ body.player .dm-only{display:none!important}
     <a href="#maps" data-v="maps">Maps</a>
     <a href="#playmat" data-v="playmat">Play mat</a>
     <a href="#shops" data-v="shops">Shops</a>
+    <a href="#money" data-v="money">Money</a>
     <a href="#tools" data-v="tools">Dice &amp; rules</a>
     <a href="#news" data-v="news">D&amp;D news</a>
   </nav>
@@ -1762,6 +1775,35 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  if(b.dataset.act==="coins-save"){ const steps=[0,1,2,3].map(i=>Math.max(1,Math.round(num(v("coin-step-"+i))||COIN_DEF[i]))); const usd=num(v("coin-usd"))>0?num(v("coin-usd")):0.01; put("settings","coins",{steps,usd},true); render(true); toast("Coin rates saved"); }
  if(b.dataset.act==="coins-reset"){ put("settings","coins",{steps:COIN_DEF.slice(),usd:0.01},true); render(true); toast("Back to 10 · 25 · 50 · 100, 1 Bronze = 1¢"); } });
 
+/* ================= money converter page ================= */
+const MONEY_UNITS=[["bronze","Bronze"],["silver","Silver"],["gold","Gold"],["diamond","Diamond"],["platinum","Platinum"],["usd","US dollars"]];
+function mNum(x){ x=Number(x)||0; if(x>0&&x<1) return x.toLocaleString("en-US",{maximumSignificantDigits:4,maximumFractionDigits:10}); return (Math.round(x*10000)/10000).toLocaleString("en-US",{maximumFractionDigits:4}); }
+function mUnitChip(k){ return k==="usd"?`<span class="usd">$ USD</span>`:`<span class="coin c-${k}"><i></i>${coinName(k)}</span>`; }
+function mAmt(gold,k){ return k==="usd"?usdText(gold):mNum(gold/coinValues()[k]); }
+function moneyResults(){ const M=ui.money, vals=coinValues(); const gold=Math.max(0,num(M.amt))*(vals[M.unit]||1);
+ const each=MONEY_UNITS.filter(([k])=>k!==M.unit).map(([k])=>`<div class="m-eq"><span class="m-big mono">${mAmt(gold,k)}</span>${mUnitChip(k)}</div>`).join("");
+ const n=Math.max(1,Math.round(num(M.n)||1)), U=Math.round(gold*coinVals().gold), per=Math.floor(U/n), left=U-per*n, perGold=per/coinVals().gold;
+ return `<div class="m-out"><p class="eyebrow">${esc(mNum(num(M.amt)))} ${esc(M.unit==="usd"?"US dollars":coinName(M.unit))} is the same as</p><div class="m-grid">${each}</div>
+  <p class="eyebrow" style="margin-top:14px">In fewest coins</p><div>${coinHTML(gold)}</div></div>
+  <div class="m-split"><p class="eyebrow">Split ${coinText(gold)} between ${n} ${n===1?"person":"people"}</p><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><b>Each gets</b> ${coinHTML(perGold)}</div>${left?`<p class="muted" style="margin:6px 0 0">${fmt(left)} Bronze left over (${usdText(left/coinVals().gold)}). Give it to someone or put it in the party pot.</p>`:`<p class="muted" style="margin:6px 0 0">Splits evenly, nothing left over.</p>`}</div>`; }
+function viewMoney(){ ui.money=ui.money||{amt:1,unit:"gold",n:Math.max(1,Math.min(6,chars().length||4))}; const M=ui.money, vals=coinValues(), st=coinSteps();
+ const opts=MONEY_UNITS.map(([k,n])=>`<option value="${k}" ${M.unit===k?"selected":""}>${n}</option>`).join("");
+ const units=MONEY_UNITS.map(x=>x[0]);
+ const chart=`<div class="table-wrap"><table class="m-chart"><thead><tr><th scope="col">1 of these</th>${units.map(k=>`<th scope="col">${mUnitChip(k)}</th>`).join("")}</tr></thead><tbody>${units.map(r=>`<tr><th scope="row">1 ${mUnitChip(r)}</th>${units.map(c=>`<td class="mono ${r===c?"same":""}">${r===c?"1":mAmt(vals[r],c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+ const C=chars().filter(c=>num(c.money)>0).sort((a,b)=>num(b.money)-num(a.money)), tot=C.reduce((a,c)=>a+num(c.money),0);
+ const purses=C.length?`<div class="table-wrap"><table class="m-purse"><thead><tr><th scope="col">Character</th><th scope="col">Coins and US dollars</th></tr></thead><tbody>${C.map(c=>`<tr><th scope="row"><a href="#char-${c.id}">${esc(c.name||"Unnamed")}</a>${c.campaign?` <span class="muted">· ${esc(c.campaign)}</span>`:""}</th><td>${coinHTML(c.money)}</td></tr>`).join("")}</tbody><tfoot><tr><th scope="row">Everyone together</th><td>${coinHTML(tot)}</td></tr></tfoot></table></div>`:`<p class="muted">Nobody has any money yet. Add coins on a character's sheet.</p>`;
+ return `<section class="section"><div class="section-head"><h2>Money</h2><span class="meta">${st[0]} Bronze = 1 Silver · ${st[1]} Silver = 1 Gold · ${st[2]} Gold = 1 Diamond · ${st[3]} Diamond = 1 Platinum · 1 Bronze = ${usdText(1/coinVals().gold)}${isDM()?` · <a href="#tools">change rates</a>`:""}</span></div>
+ <div class="card m-conv"><div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+  <label class="fld"><span>Amount</span><input type="number" id="mc-amt" min="0" step="any" value="${esc(M.amt)}" style="width:10em"></label>
+  <label class="fld"><span>Of</span><select id="mc-unit">${opts}</select></label>
+  <label class="fld"><span>Split between</span><input type="number" id="mc-n" min="1" step="1" value="${esc(M.n)}" style="width:6em"></label>
+ </div><div id="mc-out" aria-live="polite">${moneyResults()}</div></div></section>
+ <section class="section"><div class="section-head"><h2>Exchange chart</h2><span class="meta">Read across: 1 coin on the left is worth this many of the coin on top.</span></div><div class="card">${chart}</div></section>
+ <section class="section"><div class="section-head"><h2>Party purses</h2></div><div class="card">${purses}</div></section>`; }
+document.addEventListener("input",e=>{ const t=e.target; if(!t||!/^mc-(amt|unit|n)$/.test(t.id||"")||!ui.money) return;
+ if(t.id==="mc-amt") ui.money.amt=t.value; if(t.id==="mc-unit") ui.money.unit=t.value; if(t.id==="mc-n") ui.money.n=t.value;
+ const o=$("#mc-out"); if(o) o.innerHTML=moneyResults(); });
+document.addEventListener("change",e=>{ if(e.target&&e.target.id==="mc-unit"&&ui.money){ ui.money.unit=e.target.value; const o=$("#mc-out"); if(o) o.innerHTML=moneyResults(); } });
 /* ================= render & routing ================= */
 function render(force){
  if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
@@ -1778,6 +1820,7 @@ function render(force){
  else if((m=h.match(/^edit-world-(\w+)$/))){html=editWorld(m[1]);nav="worlds";ui.editing=true;}
  else if((m=h.match(/^world-(\w+)$/))){html=viewWorld(m[1]);nav="worlds";}
  else if(h==="tools"){html=viewTools();nav="tools";}
+ else if(h==="money"){html=viewMoney();nav="money";}
  else if(h==="ai-char"){html=viewAiChar();nav="characters";}
  else if(h==="maps"){html=viewMaps();nav="maps";}
  else if((m=h.match(/^map-(\w+)$/))){html=viewMap(m[1]);nav="maps";}
