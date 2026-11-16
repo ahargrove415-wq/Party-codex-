@@ -1726,10 +1726,11 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
 
 /* ================= coins: Bronze < Silver < Gold < Diamond < Platinum ================= */
 const COINS=[["platinum","Platinum"],["diamond","Diamond"],["gold","Gold"],["silver","Silver"],["bronze","Bronze"]];
-function coinRates(){ const r=(S.data.settings&&S.data.settings.coins&&S.data.settings.coins.rates)||[10,10,10,10]; return [0,1,2,3].map(i=>Math.max(1,Math.round(num(r[i])||10))); } // bronze→silver, silver→gold, gold→diamond, diamond→platinum
-function coinValues(){ const [bs,sg,gd,dp]=coinRates(); return {bronze:1/(bs*sg),silver:1/sg,gold:1,diamond:gd,platinum:gd*dp}; }
-function coinsOf(gold){ const [bs,sg,gd,dp]=coinRates(); const unit={bronze:1,silver:bs,gold:bs*sg,diamond:bs*sg*gd,platinum:bs*sg*gd*dp}; let b=Math.max(0,Math.round(num(gold)*bs*sg)); const out=[];
- for(const [k] of COINS){ const n=Math.floor(b/unit[k]); if(n){ out.push([k,n]); b-=n*unit[k]; } } return out; }
+const COIN_DEF=[10,25,50,100,150]; // worth of bronze, silver, gold, diamond, platinum
+function coinVals(){ const s=S.data.settings&&S.data.settings.coins; const r=(s&&Array.isArray(s.values))?s.values:COIN_DEF; const o={}; ["bronze","silver","gold","diamond","platinum"].forEach((k,i)=>o[k]=Math.max(1,Math.round(num(r[i])||COIN_DEF[i]))); return o; }
+function coinValues(){ const v=coinVals(); const o={}; for(const k in v) o[k]=v[k]/v.gold; return o; } // each coin's worth in Gold (money is stored in Gold)
+function coinsOf(gold){ const v=coinVals(); let u=Math.max(0,Math.round(num(gold)*v.gold)); const out=[];
+ for(const [k] of [...COINS].sort((a,b)=>v[b[0]]-v[a[0]])){ const n=Math.floor(u/v[k]); if(n){ out.push([k,n]); u-=n*v[k]; } } return out; }
 const coinName=k=>(COINS.find(x=>x[0]===k)||[k,k])[1];
 function coinText(gold){ const c=coinsOf(gold); return c.length?c.map(([k,n])=>`${fmt(n)} ${coinName(k)}`).join(", "):"0 Gold"; }
 function coinHTML(gold){ const c=coinsOf(gold); return `<span class="coins" title="${esc(coinText(gold))}">${(c.length?c:[["gold",0]]).map(([k,n])=>`<span class="coin c-${k}" aria-label="${fmt(n)} ${coinName(k)}"><i></i>${fmt(n)}</span>`).join("")}</span>`; }
@@ -1740,15 +1741,15 @@ const isCoinCur=c=>/^(gold|coins?|money|gp|)$/i.test(String(c==null?"":c).trim()
 const coinSelect=id=>`<select id="${id}" aria-label="Coin type">${COINS.map(([k,n])=>`<option value="${k}" ${k==="gold"?"selected":""}>${n}</option>`).join("")}</select>`;
 function coinFields(gold){ const have=Object.fromEntries(coinsOf(gold)); return `<div class="fld wide"><span>Money</span><div class="coin-inputs">${COINS.map(([k,n])=>`<label class="coin-in"><span class="coin c-${k}"><i></i>${n}</span><input type="number" min="0" step="1" id="f-coin-${k}" value="${have[k]||0}" aria-label="${n}"></label>`).join("")}</div></div>`; }
 function coinsFromForm(fallback){ if(!$("#f-coin-gold")) return num(fallback); const vals=coinValues(); let t=0; COINS.forEach(([k])=>{ t+=num(v("f-coin-"+k))*vals[k]; }); return Math.round(t*10000)/10000; }
-function coinSection(){ const r=coinRates(), dm=isDM(); const pairs=[["Bronze","Silver"],["Silver","Gold"],["Gold","Diamond"],["Diamond","Platinum"]];
+function coinSection(){ const val=coinVals(), dm=isDM(), ks=["bronze","silver","gold","diamond","platinum"], gv=coinValues();
  return `<section class="section"><div class="section-head"><h2>Coins</h2></div><div class="split"><div class="card" style="gap:12px">
-  <div class="ladder">${["bronze","silver","gold","diamond","platinum"].map((k,i)=>`${i?'<span class="arrow">→</span>':""}<span class="coin c-${k}"><i></i>${coinName(k)}</span>`).join("")}</div>
-  <ul class="clean">${pairs.map(([a,b],i)=>`<li class="row" style="gap:8px">${dm?`<input type="number" min="1" id="coin-rate-${i}" value="${r[i]}" style="width:5.5em" aria-label="${a} per ${b}">`:`<b class="mono">${r[i]}</b>`} ${a} = 1 ${b}</li>`).join("")}</ul>
-  ${dm?`<div class="actions"><button class="btn primary small" data-act="coins-save">Save rates</button><button class="btn small" data-act="coins-reset">Back to 10s</button></div>`:""}</div>
-  <div class="prose"><p>Money is shown in coins everywhere: sheets, shops and mission rewards. 1 Platinum is worth ${fmt(coinValues().platinum)} Gold, and 1 Gold is worth ${fmt(1/coinValues().bronze)} Bronze.</p><p class="muted">In shop prices you can type coins directly, like <b>5s</b>, <b>2d 50g</b> or <b>1p</b>. Plain numbers count as Gold.</p></div></div></section>`; }
+  <div class="ladder">${ks.map((k,i)=>`${i?'<span class="arrow">→</span>':""}<span class="coin c-${k}"><i></i>${coinName(k)}</span>`).join("")}</div>
+  <ul class="clean">${ks.map((k,i)=>`<li class="row" style="gap:8px"><span class="coin c-${k}" style="min-width:6.5em"><i></i>${coinName(k)}</span> worth ${dm?`<input type="number" min="1" id="coin-val-${i}" value="${val[k]}" style="width:5.5em" aria-label="${coinName(k)} worth">`:`<b class="mono">${val[k]}</b>`}${k!=="gold"?` <span class="muted">= ${fmt(Math.round(gv[k]*100)/100)} Gold</span>`:""}</li>`).join("")}</ul>
+  ${dm?`<div class="actions"><button class="btn primary small" data-act="coins-save">Save values</button><button class="btn small" data-act="coins-reset">Back to 10 · 25 · 50 · 100 · 150</button></div>`:""}</div>
+  <div class="prose"><p>Each coin is worth a set amount: Bronze ${val.bronze}, Silver ${val.silver}, Gold ${val.gold}, Diamond ${val.diamond}, Platinum ${val.platinum}. Money is shown in the biggest coins first, so ${val.platinum+val.silver} worth shows as 1 Platinum and 1 Silver.</p><p class="muted">In shop prices you can type coins directly, like <b>5s</b>, <b>2d 1g</b> or <b>1p</b>. Plain numbers count as Gold.</p></div></div></section>`; }
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(!b) return;
- if(b.dataset.act==="coins-save"){ const rates=[0,1,2,3].map(i=>Math.max(1,Math.round(num(v("coin-rate-"+i))||10))); put("settings","coins",{rates},true); render(true); toast("Coin rates saved"); }
- if(b.dataset.act==="coins-reset"){ put("settings","coins",{rates:[10,10,10,10]},true); render(true); toast("Back to 10 of each"); } });
+ if(b.dataset.act==="coins-save"){ const values=[0,1,2,3,4].map(i=>Math.max(1,Math.round(num(v("coin-val-"+i))||COIN_DEF[i]))); put("settings","coins",{values},true); render(true); toast("Coin values saved"); }
+ if(b.dataset.act==="coins-reset"){ put("settings","coins",{values:COIN_DEF.slice()},true); render(true); toast("Back to 10 · 25 · 50 · 100 · 150"); } });
 
 /* ================= render & routing ================= */
 function render(force){
