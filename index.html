@@ -374,6 +374,17 @@ body.player .dm-only{display:none!important}
 .tb-stats div{display:flex;justify-content:space-between;gap:6px;font-size:.88rem}
 .tb-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:.88rem;max-height:320px;overflow:auto}
 .tb-bar{margin-bottom:14px}
+.dmt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+.dmt-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.dmt-col h3{margin:0}
+.dmt-row{gap:10px}
+.dmt-camps{display:flex;flex-wrap:wrap;gap:6px 14px}
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.dmt-pre{max-height:260px;overflow:auto;font-size:.75rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre;margin:8px 0 0}
+.dmt-rules summary{cursor:pointer}
+.dmt-rules ol{margin:8px 0;padding-left:20px}
+.tag.neg{color:#c0392b;border-color:#c0392b}
+#roleSw button{max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 
 <header class="top"><div class="top-in">
@@ -387,6 +398,7 @@ body.player .dm-only{display:none!important}
     <a href="#maps" data-v="maps">Maps</a>
     <a href="#playmat" data-v="playmat">Play mat</a>
     <a href="#table" data-v="table" class="dm-only">Table</a>
+    <a href="#dms" data-v="dms" class="dm-only">DM team</a>
     <a href="#shops" data-v="shops">Shops</a>
     <a href="#money" data-v="money">Money</a>
     <a href="#tools" data-v="tools">Dice &amp; rules</a>
@@ -438,9 +450,11 @@ function startGemini(){ GEMINI.state="loading"; geminiInit().then(s=>{ CAP.sampl
 
 function localDl(){ return {save:async({filename,data})=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(data); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }}; }
 function fbWatch(){ FB.auth.onAuthStateChanged(async u=>{ FB.user=u; FB.ready=true; let dm=false;
-  if(u){ try{ await FB.fs.collection("dm").doc("_check").get(); dm=true; }catch(e){ dm=false; } }
+  const RL=await fbRole(u); dm=RL.dm; CAP.head=RL.head; CAP.scope=RL.scope; ui.dmFetch={};
+  if(!RL.head&&FB.teamSub){ FB.teamSub(); FB.teamSub=null; FB.team=null; }
   CAP.canDm=dm; ui.role=dm?((LS.get("codex2:role")==="player")?"player":"dm"):"player";
-  if(dm&&!FB.dmSub){ FB.dmSub=FB.fs.collection("dm").onSnapshot(s=>{ const m={}; s.docs.forEach(d=>m[d.id]=d.data()); S.data.dm=m; render(); },()=>{}); }
+  if(FB.dmSub&&!(dm&&!RL.scope)){ FB.dmSub(); FB.dmSub=null; S.data.dm={}; }
+  if(dm&&!RL.scope&&!FB.dmSub){ FB.dmSub=FB.fs.collection("dm").onSnapshot(s=>{ const m={}; s.docs.forEach(d=>m[d.id]=d.data()); S.data.dm=m; render(); },()=>{}); }
   if(!dm&&FB.dmSub){ FB.dmSub(); FB.dmSub=null; S.data.dm={}; }
   CAP.readOnly=false; render(true); }); }
 function authBox(){ const ab=document.getElementById("authBox"); if(!ab) return; if(!FB.on){ ab.innerHTML=""; return; }
@@ -484,13 +498,13 @@ const DEFAULT_COSTS=[["F",5],["E",8],["D",10],["C",15],["B",25],["A-",55],["A",7
 const newChar=()=>({name:"",player:"",campaign:"",race:"",cls:"",level:1,levelCap:"",exp:0,expPer:100,gainSp:5,gainStat:3,sp:0,stat:0,hpCur:0,hpMax:0,enLabel:"MP",enCur:0,enMax:0,bio:"",
  stats:[{k:"Strength",v:""},{k:"Dexterity",v:""},{k:"Defense",v:""},{k:"Magic ATK",v:""},{k:"Magic DEF",v:""},{k:"Speed",v:""},{k:"IQ",v:""},{k:"BIQ",v:""}],
  tags:[],skills:[],moves:[],items:[],sections:[],notes:"",money:0,unlocked:{},createdAt:Date.now()});
-const newTree=()=>({name:"",campaign:"",blurb:"",lanes:[],nodes:[],createdAt:Date.now()});
-const newWorld=()=>({name:"",tag:"",blurb:"",sections:[],npcs:[],createdAt:Date.now()});
+const newTree=()=>stampCamp("trees",{name:"",campaign:"",blurb:"",lanes:[],nodes:[],createdAt:Date.now()});
+const newWorld=()=>stampCamp("worlds",{name:"",tag:"",blurb:"",sections:[],npcs:[],createdAt:Date.now()});
 
 /* ================= store ================= */
 const COLS=["characters","trees","worlds","settings","maps","mats","shops","photos"];
 const S={mode:"loading",db:null,data:{characters:{},trees:{},worlds:{},settings:{},maps:{},mats:{},dm:{},tokens:{},shops:{},photos:{}},note:""};
-function writeFail(e){ if(FB.on&&e&&e.code==="permission-denied"){ toast(FB.user?"Only the DM can change that.":"Sign in with Google (top right) to make changes."); return; } if(e&&e.code==="invalid_argument"&&S.db){ if(typeof CAP!=="undefined") CAP.readOnly=true; toast("You can't change that with your access. Ask the DM to invite you by email with edit access."); setTimeout(()=>render(true),0); } else toast("Couldn't save: "+((e&&e.message)||"unknown error")); }
+function writeFail(e){ if(FB.on&&e&&e.code==="permission-denied"){ toast(FB.user?(CAP.scope?"You can only change things in the campaigns you run ("+scopeText()+").":"Only the DM can change that."):"Sign in with Google (top right) to make changes."); return; } if(e&&e.code==="invalid_argument"&&S.db){ if(typeof CAP!=="undefined") CAP.readOnly=true; toast("You can't change that with your access. Ask the DM to invite you by email with edit access."); setTimeout(()=>render(true),0); } else toast("Couldn't save: "+((e&&e.message)||"unknown error")); }
 const chain={};
 function put(col,id,doc,quiet){ doc.updatedAt=Date.now(); S.data[col]=Object.assign({},S.data[col],{[id]:doc});
  if(S.db){ const k=col+"/"+id; chain[k]=(chain[k]||Promise.resolve()).then(()=>S.db.collection(col).doc(id).set(doc)).catch(writeFail); }
@@ -867,7 +881,7 @@ function viewNews(){
 
 /* ================= roles ================= */
 const CAP={canDm:true,sample:null,img:null};
-const isDM=()=>ui.role==="dm";
+const isDM=()=>ui.role==="dm"&&!ui.outScope;
 ui.role=(LS.get("codex2:role")==="player")?"player":"dm";
 ui.ai={desc:"",camp:"",power:"Starting (level 1)",file:null,imgUrl:"",busy:false,err:"",result:null,ctl:null};
 ui.mapAi={desc:"",busy:false,err:"",ctl:null,confirm:false};
@@ -875,11 +889,11 @@ ui.tool={t:"g",mode:"paint",brush:1,label:"",labelHidden:false,zoom:28};
 ui.mw=null; ui.matSel=null; ui.matFog="off"; ui.matZoom=40;
 let mapSaveTimer=null;
 function roleSwitch(){ const el=$("#roleSw"); if(!el) return;
- el.innerHTML=CAP.canDm?`<button data-act="role" data-v="dm" class="${isDM()?"on":""}" aria-pressed="${isDM()}">DM</button><button data-act="role" data-v="player" class="${!isDM()?"on":""}" aria-pressed="${!isDM()}">Player</button>`:`<button class="on" disabled>Player</button>`; }
+ el.innerHTML=CAP.canDm?`<button data-act="role" data-v="dm" class="${isDM()?"on":""}" aria-pressed="${isDM()}" title="${CAP.scope?"DM for "+esc(scopeText()):"Head DM"}">${CAP.scope?"DM · "+esc(scopeText()):"DM"}</button><button data-act="role" data-v="player" class="${!isDM()?"on":""}" aria-pressed="${!isDM()}">Player</button>`:`<button class="on" disabled>Player</button>`; }
 async function initCaps(){
  const C=window.claude; if(FB.on){ CAP.canDm=false; ui.role="player"; CAP.dl=localDl(); fbWatch(); startGemini(); render(true); return; } if(!C||!C.use) CAP.dl=localDl();
  if(C&&C.use){
-  try{ const u=await C.use("user"); CAP.canDm=u?await u.isOwner():false; }catch(e){ CAP.canDm=false; }
+  try{ const u=await C.use("user"); CAP.user=u; const own=u?await u.isOwner():false; CAP.head=own; CAP.canDm=own; CAP.editor=!own&&u?await u.canEdit():false; if(CAP.editor) CAP.scope=[]; }catch(e){ CAP.canDm=false; CAP.head=false; }
   if(!CAP.canDm) ui.role="player";
   try{ CAP.sample=await C.use("sample"); }catch(e){ CAP.sample=null; }
   try{ CAP.dl=await C.use("downloads"); }catch(e){ CAP.dl=null; }
@@ -887,11 +901,12 @@ async function initCaps(){
  }
  if(S.db&&CAP.canDm){ S.db.collection("dm").onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>m[d.id]=d.data()); S.data.dm=m; render(); },()=>{}); }
  else if(!S.db){ S.data.dm=LS.get("codex2:dm")||{}; }
+ if(S.db&&CAP.user) claudeTeamInit(CAP.user);
  render();
 }
-function dmBox(key){ if(!isDM()) return "";
+function dmBox(key){ if(!isDM()) return ""; dmNoteLoad(key);
  const d=S.data.dm&&S.data.dm[key];
- return `<div class="fieldset dmbox"><h3>DM notes</h3><p class="edit-hint">${S.mode==="live"?"Locked to the DM: only you can read these. Players can't see them, even with edit access.":"Saved in this browser."}</p><textarea id="dmnote" data-key="${key}" placeholder="Secrets, twists, hidden stats, what they don't know yet…">${esc(d&&d.text||"")}</textarea></div>`; }
+ return `<div class="fieldset dmbox"><h3>DM notes</h3><p class="edit-hint">${S.mode==="live"?"Locked to the DMs who run this campaign. Players can't see them.":"Saved in this browser."}</p><textarea id="dmnote" data-key="${key}" placeholder="Secrets, twists, hidden stats, what they don't know yet…">${esc(d&&d.text||"")}</textarea></div>`; }
 
 /* ================= AI helpers ================= */
 const HIDE_CODES=["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
@@ -1041,7 +1056,7 @@ const STURL={};
 function stampUrl(k){ if(STURL[k]) return STURL[k]; const cv=document.createElement("canvas"); cv.width=cv.height=64; const x=cv.getContext("2d"); x.translate(32,34); const S=40; STAMPS[k].d(x,S,Math.max(1,S*.035)); return STURL[k]=cv.toDataURL(); }
 
 /* ---- model ---- */
-const newMap=(w,h)=>{ w=w||30; h=h||20; return {name:"",campaign:"",w,h,res:R,base:"g",paint:"g".repeat(w*R*h*R),objects:[],labels:[],fogOn:false,fog:"0".repeat(w*h),style:"painted",grid:false,frame:true,createdAt:Date.now()}; };
+const newMap=(w,h)=>{ w=w||30; h=h||20; return stampCamp("maps",{name:"",campaign:"",w,h,res:R,base:"g",paint:"g".repeat(w*R*h*R),objects:[],labels:[],fogOn:false,fog:"0".repeat(w*h),style:"painted",grid:false,frame:true,createdAt:Date.now()}); };
 const maps=()=>Object.entries(S.data.maps||{}).map(([id,m])=>Object.assign({id},m));
 const mats=()=>Object.entries(S.data.mats||{}).map(([id,m])=>Object.assign({id},m));
 function normMap(src){ const m=clone(src); m.w=Math.max(4,num(m.w)||24); m.h=Math.max(4,num(m.h)||16); const PW=m.w*R, N=PW*m.h*R;
@@ -1380,7 +1395,7 @@ document.addEventListener("input",e=>{ const t=e.target;
 document.addEventListener("change",e=>{ const t=e.target;
  if(t.id==="ai-power") ui.ai.power=t.value;
  if(t.id==="ai-img"&&t.files&&t.files[0]){ const f=t.files[0]; if(CAP.img&&f.size>CAP.img.maxInputBytes){ toast("That picture is too big. Try a smaller one."); t.value=""; return; } ui.ai.file=f; ui.ai.imgUrl=URL.createObjectURL(f); render(true); }
- if(t.id==="dmnote"){ const k=t.dataset.key; const cur=S.data.dm&&S.data.dm[k]; if((cur&&cur.text||"")!==t.value){ S.data.dm=Object.assign({},S.data.dm,{[k]:{text:t.value}}); if(S.db){ S.db.collection("dm").doc(k).set({text:t.value,updatedAt:Date.now()}).then(()=>toast("DM notes saved")).catch(()=>toast("Couldn't save DM notes. Only editors can.")); } else { LS.set("codex2:dm",S.data.dm); toast("DM notes saved"); } } }
+ if(t.id==="dmnote"){ const k=t.dataset.key; const cur=S.data.dm&&S.data.dm[k]; if((cur&&cur.text||"")!==t.value){ S.data.dm=Object.assign({},S.data.dm,{[k]:{text:t.value}}); if(S.db){ S.db.collection("dm").doc(k).set({text:t.value,campaign:campOf(k)||"",updatedAt:Date.now()}).then(()=>toast("DM notes saved")).catch(()=>toast("Couldn't save DM notes. Only DMs for this campaign can.")); } else { LS.set("codex2:dm",S.data.dm); toast("DM notes saved"); } } }
 });
 /* pointer: map editor, mat fog, token dragging */
 let painting=null, drag=null;
@@ -1412,7 +1427,7 @@ function endPointer(){
 document.addEventListener("pointerup",endPointer); document.addEventListener("pointercancel",endPointer);
 
 /* ================= shops ================= */
-const newShop=()=>({name:"",campaign:"",keeper:"",blurb:"",currency:"gold",open:true,items:[],log:[],createdAt:Date.now()});
+const newShop=()=>stampCamp("shops",{name:"",campaign:"",keeper:"",blurb:"",currency:"gold",open:true,items:[],log:[],createdAt:Date.now()});
 const shops=()=>Object.entries(S.data.shops||{}).map(([id,s])=>Object.assign({id},s));
 const getS=id=>S.data.shops&&S.data.shops[id]?clone(S.data.shops[id]):null;
 const RARITY=["Common","Uncommon","Rare","Very rare","Legendary","Artifact"];
@@ -1878,11 +1893,150 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); i
  if(a==="tbl-clear"){ ui.tbl=[]; tblSave(); render("keep"); return; }
 });
 document.addEventListener("toggle",e=>{ const d=e.target; if(d&&d.dataset&&d.dataset.tk) ui.tblOpen[d.dataset.tk]=d.open; },true);
+/* ================= DM team: more DMs, each running their own campaigns ================= */
+const FBX=()=>typeof FB!=="undefined"&&FB.on;
+if(CAP.head==null) CAP.head=true; if(CAP.scope===undefined) CAP.scope=null; // scope null = every campaign
+const ck=s=>String(s==null?"":s).trim().toLowerCase();
+const dmAll=()=>!CAP.scope;
+function campOf(key){ const h=String(key||""); let m;
+ if((m=h.match(/^(?:edit-)?char-(\w+)$/))) return (S.data.characters[m[1]]||{}).campaign||"";
+ if((m=h.match(/^(?:edit-)?tree-(\w+)$/))) return (S.data.trees[m[1]]||{}).campaign||"";
+ if((m=h.match(/^(?:edit-)?world-(\w+)$/))) return (S.data.worlds[m[1]]||{}).name||"";
+ if((m=h.match(/^map-(\w+)$/))) return ((S.data.maps||{})[m[1]]||{}).campaign||"";
+ if((m=h.match(/^(?:edit-)?shop-(\w+)$/))) return (S.data.shops[m[1]]||{}).campaign||"";
+ if((m=h.match(/^mat-(\w+)$/))){ const t=(S.data.mats||{})[m[1]]||{}; return t.campaign||((S.data.maps||{})[t.mapId]||{}).campaign||""; }
+ return null; }
+function dmRuns(camp){ return CAP.canDm&&ui.role==="dm"&&(dmAll()||CAP.scope.includes(ck(camp))); }
+function campaignList(){ const set=new Map(); [...chars(),...trees(),...shops(),...Object.values(S.data.maps||{})].forEach(x=>{ if(x&&x.campaign) set.set(ck(x.campaign),String(x.campaign).trim()); }); worlds().forEach(w=>{ if(w.name) set.set(ck(w.name),String(w.name).trim()); });
+ return [...set.values()].sort((a,b)=>a.localeCompare(b)); }
+function scopeText(){ return dmAll()?"every campaign":CAP.scope.length?CAP.scope.map(k=>campaignList().find(c=>ck(c)===k)||k).join(", "):"no campaigns yet"; }
+function myFirstCamp(){ if(dmAll()) return ""; const k=CAP.scope[0]; return k?(campaignList().find(c=>ck(c)===k)||k):""; }
+/* new things a campaign DM makes start in their campaign, so they're allowed to save them */
+function stampCamp(col,doc){ if(dmAll()) return doc; const c=myFirstCamp(); if(!c) return doc; if(col==="worlds"){ if(!doc.name) doc.name=c; } else if(!doc.campaign) doc.campaign=c; return doc; }
+
+ui.dmFetch=ui.dmFetch||{};
+function dmNoteLoad(key){ if(!FBX()||dmAll()||!S.db||ui.dmFetch[key]) return; ui.dmFetch[key]=1;
+ S.db.collection("dm").doc(key).get().then(d=>{ if(d&&d.exists){ S.data.dm=Object.assign({},S.data.dm,{[key]:d.data()}); render(); } }).catch(()=>{}); }
+
+/* ---- Firebase (website) ---- */
+const FB_RULES=email=>`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isOwner() { return signedIn() && request.auth.token.email == "${email||"YOUR_GOOGLE_EMAIL"}"; }
+    function myDmPath() { return /databases/$(database)/documents/dms/$(request.auth.token.email.lower()); }
+    function isTeamDM() { return signedIn() && exists(myDmPath()); }
+    function allCamps() { return isOwner() || (isTeamDM() && get(myDmPath()).data.all == true); }
+    function runs(c) { return allCamps() || (isTeamDM() && c is string && c.lower() in get(myDmPath()).data.campaigns); }
+    match /dms/{email} {
+      allow get: if isOwner() || (signedIn() && request.auth.token.email.lower() == email);
+      allow list, write: if isOwner();
+    }
+    match /dm/{doc} {
+      allow get: if allCamps() || (isTeamDM() && resource != null && runs(resource.data.get('campaign', '')));
+      allow list: if allCamps();
+      allow create, update: if allCamps() || (runs(request.resource.data.get('campaign', '')) && (resource == null || runs(resource.data.get('campaign', ''))));
+      allow delete: if allCamps();
+    }
+    match /trees/{doc} {
+      allow read: if true;
+      allow create, update: if runs(request.resource.data.get('campaign', '')) && (resource == null || runs(resource.data.get('campaign', '')));
+      allow delete: if runs(resource.data.get('campaign', ''));
+    }
+    match /maps/{doc} {
+      allow read: if true;
+      allow create, update: if runs(request.resource.data.get('campaign', '')) && (resource == null || runs(resource.data.get('campaign', '')));
+      allow delete: if runs(resource.data.get('campaign', ''));
+    }
+    match /worlds/{doc} {
+      allow read: if true;
+      allow create, update: if runs(request.resource.data.get('name', '')) && (resource == null || runs(resource.data.get('name', '')));
+      allow delete: if runs(resource.data.get('name', ''));
+    }
+    match /settings/{doc} { allow read: if true; allow write: if allCamps(); }
+    match /characters/{doc} { allow read: if true; allow write: if signedIn(); }
+    match /shops/{doc} { allow read: if true; allow write: if signedIn(); }
+    match /photos/{doc} { allow read: if true; allow write: if signedIn(); }
+    match /mats/{mat} {
+      allow read: if true; allow write: if signedIn();
+      match /tokens/{tok} { allow read: if true; allow write: if signedIn(); }
+    }
+    match /{col}/{doc} { allow read: if col != "dm" && col != "dms" && col != "rulesv2"; allow write: if isOwner(); }
+  }
+}`;
+async function fbRole(u){ const out={dm:false,head:false,scope:null}; if(!u) return out; const em=ck(u.email);
+ try{ const d=await FB.fs.collection("dms").doc(em).get(); if(d.exists){ const x=d.data()||{}; out.dm=true; out.scope=x.all?null:(x.campaigns||[]).map(ck); return out; } }catch(e){}
+ try{ await FB.fs.collection("dm").doc("_check").get(); out.dm=true; out.head=true; out.scope=null; }catch(e){}
+ return out; }
+function fbTeamWatch(){ if(!FBX()||!CAP.head||FB.teamSub) return; FB.team=FB.team||null;
+ if(FB.rulesOld==null){ FB.rulesOld=false; FB.fs.collection("rulesv2").doc("check").get().then(()=>{ FB.rulesOld=true; if(/^dms$/.test((location.hash||"").slice(1))) render(); }).catch(()=>{}); }
+ FB.teamSub=FB.fs.collection("dms").onSnapshot(s=>{ FB.team=s.docs.map(d=>Object.assign({email:d.id},d.data())); FB.teamErr=""; if(/^dms$/.test((location.hash||"").slice(1))) render(); },
+  e=>{ FB.teamErr=e&&e.code||"error"; FB.teamSub=null; if(/^dms$/.test((location.hash||"").slice(1))) render(); }); }
+
+/* ---- claude.ai: people shared with "Can edit" ---- */
+async function claudeTeamInit(u){ if(!u||!S.db) return; let id=null; try{ id=await u.id(); }catch(e){} CAP.myId=id;
+ if(!CAP.head&&CAP.editor&&id){ try{ const me=await S.db.collection("dmteam").doc(id).get(); if(!me.exists) await S.db.collection("dmteam").doc(id).set({joinedAt:Date.now()}); }catch(e){} }
+ if(CAP.head||CAP.editor){
+  S.db.collection("dmcamps").doc("team").onSnapshot(d=>{ CAP.assign=(d&&d.exists&&d.data().members)||{};
+    if(!CAP.head){ const a=id&&CAP.assign[id]; const had=CAP.canDm; CAP.canDm=!!(a&&(a.all||(a.campaigns||[]).length)); CAP.scope=a&&!a.all?(a.campaigns||[]).map(ck):null;
+     if(CAP.canDm&&!had){ ui.role=LS.get("codex2:role")==="player"?"player":"dm"; if(!S.dmSub) S.dmSub=S.db.collection("dm").onSnapshot(s=>{ const m={}; s.docs.forEach(x=>m[x.id]=x.data()); S.data.dm=m; render(); },()=>{}); }
+     if(!CAP.canDm) ui.role="player"; }
+    render(true); },()=>{});
+  if(CAP.head) S.db.collection("dmteam").onSnapshot(s=>{ CAP.editors=s.docs.map(d=>d.id); render(); },()=>{}); } }
+
+/* ---- the DM team page ---- */
+ui.dmt=ui.dmt||{};
+function campChecks(prefix,all,camps){ const L=campaignList(), have=new Set((camps||[]).map(ck));
+ return `<div class="dmt-camps"><label class="chk"><input type="checkbox" data-dmt-all="${prefix}" ${all?"checked":""}> <b>Every campaign</b></label>
+  ${L.map(c=>`<label class="chk"><input type="checkbox" data-dmt-camp="${prefix}" value="${esc(c)}" ${all?"disabled":""} ${have.has(ck(c))?"checked":""}> ${esc(c)}</label>`).join("")||`<span class="muted">No campaigns yet. Give a character or world a campaign name first.</span>`}</div>`; }
+function readChecks(prefix){ const all=!!($(`[data-dmt-all="${prefix}"]`)||{}).checked; const camps=$$(`[data-dmt-camp="${prefix}"]`).filter(x=>x.checked).map(x=>ck(x.value)); return {all,campaigns:all?[]:camps}; }
+function viewDmTeam(){
+ const head=`<section class="section"><div class="section-head"><h2>DM team</h2><span class="meta">Each DM runs their own campaigns. They get DM tools and secret notes for those campaigns, and see everyone else's as a player.</span></div>`;
+ if(!CAP.canDm&&!CAP.editor) return head+emptyBox("DM only","Ask the head DM to add you to the DM team.",null,"")+`</section>`;
+ if(!CAP.head){ return head+`<div class="card"><p>You're a DM for <b>${esc(scopeText())}</b>.</p><p class="muted">The head DM chooses which campaigns you run. Ask them if you need another one.</p></div></section>`; }
+ if(!S.db) return head+`<div class="card"><p class="muted">The DM team works on the shared site, where people sign in. Open the codex on claude.ai or on your GitHub site to add DMs.</p></div></section>`;
+ if(FBX()){ fbTeamWatch(); const T=FB.team, email=FB.user&&FB.user.email||"";
+  const rulesCard=`<details class="card dmt-rules" ${FB.teamErr||FB.rulesOld?"open":""}><summary><b>One-time setup: update your Firebase rules</b> ${FB.teamErr||FB.rulesOld?`<span class="tag neg">Needed</span>`:`<span class="muted">(done)</span>`}</summary>
+   <ol><li>Open <b>Firebase console → Firestore Database → Rules</b>.</li><li>Delete everything there and paste the rules below. Your sign-in email is already filled in.</li><li>Click <b>Publish</b>, then come back and refresh this page.</li></ol>
+   <div class="row" style="gap:8px"><button class="btn primary small" data-act="dmt-copy">Copy rules</button></div><pre class="dmt-pre" id="dmt-rules">${esc(FB_RULES(email))}</pre></details>`;
+  const add=`<div class="card"><h3 style="margin:0">Add a DM</h3><p class="muted" style="margin:0">They sign in with this Google account on the site. They'll be DM for the campaigns you tick.</p>
+   <label class="fld"><span>Their Google email</span><input type="email" id="dmt-email" placeholder="friend@gmail.com" autocomplete="off"></label>
+   <label class="fld"><span>Name (optional)</span><input id="dmt-name" placeholder="Who is this?"></label>${campChecks("new",false,[])}
+   <div><button class="btn primary" data-act="dmt-add">Add DM</button></div></div>`;
+  const list=T==null?`<p class="muted">${FB.teamErr?"Update the rules above to manage the DM team.":"Loading the DM team…"}</p>`:T.length?T.map(d=>`<div class="card dmt-row"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${esc(d.name||d.email)}</b>${d.name?` <span class="muted">${esc(d.email)}</span>`:""}</div>
+    <div class="row" style="gap:6px"><button class="btn small" data-act="dmt-save" data-e="${esc(d.email)}">Save campaigns</button><button class="btn small" data-act="dmt-del" data-e="${esc(d.email)}">Remove</button></div></div>${campChecks("e:"+d.email,!!d.all,d.campaigns)}</div>`).join(""):`<p class="muted">No other DMs yet. Add one above.</p>`;
+  return head+`<div class="dmt-grid"><div class="dmt-col">${add}${rulesCard}</div><div class="dmt-col"><h3>DMs</h3><div class="card"><span><b>You</b> <span class="muted">· head DM, every campaign</span></span></div>${list}</div></div></section>`; }
+ /* claude.ai */
+ const E=(CAP.editors||[]).filter(i=>i!==CAP.myId), A=CAP.assign||{};
+ if(E.length) dmtNames(E);
+ const nm=id=>(ui.dmt.names&&ui.dmt.names[id])||"Someone with edit access";
+ return head+`<div class="dmt-grid"><div class="dmt-col"><div class="card"><h3 style="margin:0">Add a DM</h3><ol><li>Open the <b>Share</b> menu at the top of this page.</li><li>Invite them with <b>Can edit</b>.</li><li>Once they open the page, they show up on the right. Tick their campaigns and press <b>Save campaigns</b>.</li></ol><p class="muted" style="margin:0">Until you give them a campaign they see the codex as a player.</p></div></div>
+  <div class="dmt-col"><h3>DMs</h3><div class="card"><span><b>You</b> <span class="muted">· head DM, every campaign</span></span></div>
+  ${E.length?E.map(id=>{ const a=A[id]||{}; return `<div class="card dmt-row"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(nm(id))}</b><div class="row" style="gap:6px"><button class="btn small" data-act="dmt-csave" data-u="${esc(id)}">Save campaigns</button>${a.all||(a.campaigns||[]).length?`<button class="btn small" data-act="dmt-cdel" data-u="${esc(id)}">Remove as DM</button>`:""}</div></div>${campChecks("u:"+id,!!a.all,a.campaigns)}</div>`; }).join(""):`<p class="muted">Nobody with edit access has opened the page yet.</p>`}</div></div></section>`; }
+function dmtNames(ids){ const need=ids.filter(i=>!(ui.dmt.names&&ui.dmt.names[i])); if(!need.length||ui.dmt.loading||!CAP.user||!CAP.user.profiles) return; ui.dmt.loading=1;
+ CAP.user.profiles(need).then(ps=>{ ui.dmt.names=Object.assign({},ui.dmt.names); need.forEach(i=>{ ui.dmt.names[i]=(ps&&ps[i]&&ps[i].name)||"Someone with edit access"; }); ui.dmt.loading=0; render(); }).catch(()=>{ ui.dmt.loading=0; }); }
+document.addEventListener("change",e=>{ const t=e.target; if(t&&t.dataset&&t.dataset.dmtAll!=null){ $$(`[data-dmt-camp="${t.dataset.dmtAll}"]`).forEach(x=>x.disabled=t.checked); } });
+document.addEventListener("click",async e=>{ const b=e.target.closest("[data-act]"); if(!b) return; const a=b.dataset.act; if(!/^dmt-/.test(a)) return;
+ if(a==="dmt-copy"){ const t=($("#dmt-rules")||{}).textContent||""; try{ await navigator.clipboard.writeText(t); toast("Rules copied"); }catch(_){ const r=document.createRange(); r.selectNodeContents($("#dmt-rules")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast("Rules selected. Press Ctrl+C (or Cmd+C) to copy."); } return; }
+ if(!CAP.head) return;
+ if(a==="dmt-add"){ const em=ck(v("dmt-email")); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast("Type their Google email first"); return; } if(FB.user&&ck(FB.user.email)===em){ toast("That's you. You're already the head DM."); return; }
+  if(FB.rulesOld){ toast("Update your Firebase rules first (setup box below), then refresh."); return; }
+  const c=readChecks("new"); if(!c.all&&!c.campaigns.length){ toast("Tick at least one campaign, or Every campaign"); return; }
+  b.disabled=true; try{ await FB.fs.collection("dms").doc(em).set({name:v("dmt-name").trim(),all:c.all,campaigns:c.campaigns,addedAt:Date.now()}); toast("DM added. They can sign in now."); render(true); }catch(err){ toast(err&&err.code==="permission-denied"?"Update the Firebase rules first (setup box below).":"Couldn't add: "+((err&&err.message)||"error")); } b.disabled=false; return; }
+ if(a==="dmt-save"){ const em=b.dataset.e, c=readChecks("e:"+em); if(!c.all&&!c.campaigns.length){ toast("Tick at least one campaign, or press Remove"); return; }
+  try{ await FB.fs.collection("dms").doc(em).set({all:c.all,campaigns:c.campaigns},{merge:true}); toast("Campaigns saved"); }catch(err){ toast("Couldn't save: "+((err&&err.message)||"error")); } return; }
+ if(a==="dmt-del"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again to remove"; return; } try{ await FB.fs.collection("dms").doc(b.dataset.e).delete(); toast("Removed from the DM team"); }catch(err){ toast("Couldn't remove: "+((err&&err.message)||"error")); } return; }
+ if(a==="dmt-csave"||a==="dmt-cdel"){ const id=b.dataset.u; const c=a==="dmt-cdel"?{all:false,campaigns:[]}:readChecks("u:"+id);
+  if(a==="dmt-csave"&&!c.all&&!c.campaigns.length){ toast("Tick at least one campaign, or press Remove as DM"); return; }
+  const members=Object.assign({},CAP.assign||{}); if(a==="dmt-cdel") delete members[id]; else members[id]=c;
+  try{ await S.db.collection("dmcamps").doc("team").set({members,updatedAt:Date.now()}); toast(a==="dmt-cdel"?"Removed as DM":"Campaigns saved"); }catch(err){ toast("Couldn't save: "+((err&&err.message)||err&&err.code||"error")); } return; }
+});
 /* ================= render & routing ================= */
 function render(force){
  if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
  const h=(location.hash||"#home").slice(1); let html,nav="home",m;
  ui.editing=false;
+ ui.outScope=false; if(ui.role==="dm"&&CAP.canDm&&CAP.scope){ const pc=campOf(h); if(pc!=null&&!CAP.scope.includes(ck(pc))) ui.outScope=pc||"no campaign"; }
  const frame=document.querySelector(".canvas-frame"), sx=frame?frame.scrollLeft:0, stp=frame?frame.scrollTop:0, fid=frame?frame.id:null, sy=window.scrollY;
  if(h==="characters"){html=viewCharacters();nav="characters";}
  else if((m=h.match(/^edit-char-(\w+)$/))){html=editChar(m[1]);nav="characters";ui.editing=true;}
@@ -1894,6 +2048,7 @@ function render(force){
  else if((m=h.match(/^edit-world-(\w+)$/))){html=editWorld(m[1]);nav="worlds";ui.editing=true;}
  else if((m=h.match(/^world-(\w+)$/))){html=viewWorld(m[1]);nav="worlds";}
  else if(h==="tools"){html=viewTools();nav="tools";}
+ else if(h==="dms"){html=viewDmTeam();nav="dms";}
  else if(h==="table"){html=viewTable();nav="table";}
  else if(h==="money"){html=viewMoney();nav="money";}
  else if(h==="ai-char"){html=viewAiChar();nav="characters";}
@@ -1908,8 +2063,10 @@ function render(force){
  else if(h==="news"){html=viewNews();nav="news";}
  else html=viewHome();
  if(!/^edit-shop-/.test(h)) ui.shopDraft=null;
- if(!isDM()&&/^edit-(tree|world|shop)-/.test(h)){ html=`<div class="empty"><h3>That's a DM page</h3><p class="muted">Switch to DM mode at the top to edit trees, worlds and shops.</p><a class="btn" href="#home">Home</a></div>`; ui.editing=false; }
+ if(!isDM()&&/^edit-(tree|world|shop)-/.test(h)){ html=`<div class="empty"><h3>That's a DM page</h3><p class="muted">${ui.outScope?`Only a DM who runs ${ui.outScope==="no campaign"?"every campaign":esc(ui.outScope)} can edit this. You run ${esc(scopeText())}.`:"Switch to DM mode at the top to edit trees, worlds and shops."}</p><a class="btn" href="#home">Home</a></div>`; ui.editing=false; }
  if(CAP.readOnly&&!isDM()) html=`<div class="note">Your access is view-only, so changes won't save. Ask the DM to invite you by email with edit access in the Share menu so you can edit characters.</div>`+html;
+ if(ui.outScope&&!/^edit-/.test(h)) html=`<div class="note">You're the DM for ${esc(scopeText())}. This belongs to ${ui.outScope==="no campaign"?"no campaign":esc(ui.outScope)}, so you're seeing it as a player.</div>`+html;
+ if(CAP.editor&&!CAP.canDm&&(h==="home"||h==="")) html=`<div class="note">You have edit access. Ask the head DM to give you a campaign on their DM team page, then you'll get DM tools for it.</div>`+html;
  if(S.note) html=`<div class="note">${esc(S.note)}</div>`+html;
  $("#app").innerHTML=html;
  $$("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.v===nav));
