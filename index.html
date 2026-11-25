@@ -385,6 +385,12 @@ body.player .dm-only{display:none!important}
 .dmt-rules ol{margin:8px 0;padding-left:20px}
 .tag.neg{color:#c0392b;border-color:#c0392b}
 #roleSw button{max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.up-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:130px;padding:18px;border:2px dashed var(--line);border-radius:14px;text-align:center;cursor:pointer;background:var(--panel)}
+.up-drop:hover,.up-drop:focus-visible,.up-drop.over{border-color:var(--accent,#8a5a14);outline:none}
+.up-drop b{font-size:1.05rem;word-break:break-all}
+.up-types{display:flex;flex-direction:column;gap:8px;margin:4px 0 0;padding:0;list-style:none;font-size:.9rem}
+.up-types li{display:flex;flex-direction:column}
+.up-portrait{width:84px;height:84px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
 </style>
 
 <header class="top"><div class="top-in">
@@ -569,7 +575,7 @@ function viewHome(){
  const C=chars(),T=trees(),Wd=worlds();
  return `<section class="hero"><span class="sigil">Your table's codex</span><h1>The Party Codex</h1>
   <p class="lede">A blank book for your campaigns. Write up characters, build skill trees one skill at a time, and keep each world's lore and NPCs together. Everything you add saves for the whole party.</p>
-  <div class="actions"><button class="btn primary" data-act="new-char">New character</button><a class="btn" href="#ai-char">Create with AI</a><button class="btn dm-only" data-act="new-tree">New skill tree</button><button class="btn dm-only" data-act="new-world">New world</button><button class="btn dm-only" data-act="new-map">New map</button><a class="btn" href="#playmat">Play mat</a><a class="btn" href="#shops">Shops</a></div>
+  <div class="actions"><button class="btn primary" data-act="new-char">New character</button><a class="btn" href="#ai-char">Create with AI</a><a class="btn" href="#upload-char">Upload a sheet</a><button class="btn dm-only" data-act="new-tree">New skill tree</button><button class="btn dm-only" data-act="new-world">New world</button><button class="btn dm-only" data-act="new-map">New map</button><a class="btn" href="#playmat">Play mat</a><a class="btn" href="#shops">Shops</a></div>
   <p class="meta">${isDM()?"DM mode: you can build trees, worlds and maps and see DM notes. Switch to Player at the top to see what your table sees.":"Player mode: you can edit characters, spend skill points, move tokens on the play mat and buy from shops. Trees, worlds, maps and DM notes are the DM's."}</p>
   ${FB.on&&isDM()?`<div><button class="btn" data-act="fb-import">Load updates from Claude (characters, skill trees, shops)</button></div>`:""}${FB.on&&FB.user?(()=>{ const L=localSaved(); const n=Object.values(L).reduce((t,r)=>t+r.length,0); const nc=(L.characters||[]).length; return n?`<div><button class="btn primary" data-act="fb-local">Upload ${n} item${n>1?"s":""} saved in this browser${nc?` (${nc} character${nc>1?"s":""})`:""}</button></div>`:""; })():""}${FB.on&&FB.ready&&!FB.user?`<p class="meta">Sign in with Google at the top right to edit characters, move tokens and shop.</p>`:""}
   <div class="counts"><span><b>${C.length}</b>characters</span><span><b>${T.length}</b>skill trees</span><span><b>${Wd.length}</b>worlds</span><span><b>${maps().length}</b>maps</span></div></section>
@@ -591,7 +597,7 @@ function worldCard(w){ return `<a class="card" href="#world-${w.id}"><span class
 function viewCharacters(){
  const all=chars(), q=ui.q.toLowerCase(); const campsList=[...new Set(all.map(c=>c.campaign).filter(Boolean))];
  const list=all.filter(c=>(ui.camp==="all"||c.campaign===ui.camp)&&(!q||[c.name,c.player,c.race,c.cls,c.campaign].join(" ").toLowerCase().includes(q))).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
- return `<section class="section"><div class="section-head"><h2>Characters</h2><div class="actions"><a class="btn" href="#ai-char">Create with AI</a><button class="btn primary" data-act="new-char">New character</button></div></div>
+ return `<section class="section"><div class="section-head"><h2>Characters</h2><div class="actions"><a class="btn" href="#upload-char">Upload a sheet</a><a class="btn" href="#ai-char">Create with AI</a><button class="btn primary" data-act="new-char">New character</button></div></div>
  ${loading()?`<p class="muted">Opening the codex…</p>`:!all.length?emptyBox("No characters yet","Each sheet holds stats, skills, moves, items and a session tracker for HP, energy, EXP and points.","new-char","Create the first character"):`
  <div class="filters"><input type="search" id="q" placeholder="Search by name, player, race or class" value="${esc(ui.q)}" aria-label="Search characters">
  <select id="campSel" aria-label="Filter by campaign"><option value="all">All campaigns</option>${campsList.map(k=>`<option ${ui.camp===k?"selected":""}>${esc(k)}</option>`).join("")}</select></div>
@@ -627,7 +633,7 @@ function viewChar(id){
  </aside>`;
  return `<a href="#characters" class="muted">← All characters</a>
  <section class="sheet-head"><span class="eyebrow">${W?`<a href="#world-${W.id}">${esc(c.campaign)}</a>`:esc(c.campaign||"No campaign")}${c.player?" · played by "+esc(c.player):""}</span>
-  <div class="row" style="justify-content:space-between"><div class="sheet-title">${portraitOf(c)?`<button class="ph-img" data-act="ph-view" data-id="${c.portrait}" aria-label="View portrait">${pImg(c,"portrait")}</button>`:""}<h1>${esc(c.name||"Unnamed character")}</h1></div><div class="actions"><button class="btn dm-only" data-act="tbl-add" data-c="${id}">${tblIds().includes(id)?"On the table ✓":"Add to table"}</button><a class="btn" href="#edit-char-${id}">Edit sheet</a></div></div>
+  <div class="row" style="justify-content:space-between"><div class="sheet-title">${portraitOf(c)?`<button class="ph-img" data-act="ph-view" data-id="${c.portrait}" aria-label="View portrait">${pImg(c,"portrait")}</button>`:""}<h1>${esc(c.name||"Unnamed character")}</h1></div><div class="actions">${CAP.dl?`<button class="btn" data-act="char-dl" data-c="${id}">Download sheet</button>`:""}<button class="btn dm-only" data-act="tbl-add" data-c="${id}">${tblIds().includes(id)?"On the table ✓":"Add to table"}</button><a class="btn" href="#edit-char-${id}">Edit sheet</a></div></div>
   <div class="row">${c.race?`<span class="tag">${esc(c.race)}</span>`:""}${c.cls?`<span class="tag">${esc(c.cls)}</span>`:""}<span class="tag mono">Lv ${fmt(c.level)}${c.levelCap?" / "+esc(c.levelCap):""}</span>${used.map(t=>`<a class="tag" href="#tree-${t.id}">Tree: ${esc(t.name||"Untitled")}</a>`).join("")}</div>
   ${c.bio?`<p class="lede">${esc(c.bio)}</p>`:""}</section>
  <div class="sheet"><div class="section" style="min-width:0">
@@ -2031,6 +2037,119 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-act
   const members=Object.assign({},CAP.assign||{}); if(a==="dmt-cdel") delete members[id]; else members[id]=c;
   try{ await S.db.collection("dmcamps").doc("team").set({members,updatedAt:Date.now()}); toast(a==="dmt-cdel"?"Removed as DM":"Campaigns saved"); }catch(err){ toast("Couldn't save: "+((err&&err.message)||err&&err.code||"error")); } return; }
 });
+/* ================= character sheet upload (and download) ================= */
+ui.up=ui.up||{file:null,kind:"",name:"",camp:"",busy:false,err:"",result:null,portrait:null,src:"",ctl:null,status:""};
+const UP_ACCEPT=".json,.pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md,.csv,.html,.htm,.docx,image/*,application/pdf";
+const loadedLibs={};
+function loadLib(url,check){ if(check()) return Promise.resolve(); if(loadedLibs[url]) return loadedLibs[url];
+ return loadedLibs[url]=new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=url; s.onload=()=>check()?res():rej(new Error("The reader didn't start")); s.onerror=()=>{ delete loadedLibs[url]; rej(new Error("Couldn't load the file reader. Check your internet connection.")); }; document.head.appendChild(s); }); }
+async function pdfLib(){ const B="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+ await loadLib(B+"pdf.worker.min.js",()=>!!(window.pdfjsWorker&&window.pdfjsWorker.WorkerMessageHandler)); // main-thread reader, no web worker needed
+ await loadLib(B+"pdf.min.js",()=>!!window.pdfjsLib); window.pdfjsLib.GlobalWorkerOptions.workerSrc=B+"pdf.worker.min.js"; return window.pdfjsLib; }
+async function readPdf(file){ const lib=await pdfLib(); const doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+ let text="", fields=[]; const pages=Math.min(doc.numPages,6), canv=[];
+ for(let i=1;i<=pages;i++){ const pg=await doc.getPage(i);
+  try{ const tc=await pg.getTextContent(); text+=tc.items.map(t=>t.str).join(" ")+"\n"; }catch(e){}
+  try{ (await pg.getAnnotations()).forEach(a=>{ const val=a.fieldValue; if(a.fieldName&&val!=null&&val!==""&&val!=="Off") fields.push(`${a.fieldName}: ${Array.isArray(val)?val.join(", "):val}`); }); }catch(e){}
+  if(i<=3){ const vp0=pg.getViewport({scale:1}), sc=Math.min(2,1200/vp0.width), vp=pg.getViewport({scale:sc}); const c=document.createElement("canvas"); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+   const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); await pg.render({canvasContext:g,viewport:vp}).promise; canv.push(c); } }
+ let image=null; if(canv.length){ const W=Math.max(...canv.map(c=>c.width)), H=Math.min(6000,canv.reduce((a,c)=>a+c.height,0)); const out=document.createElement("canvas"); out.width=W; out.height=H; const g=out.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,H); let y=0; canv.forEach(c=>{ g.drawImage(c,0,y); y+=c.height; });
+  image=await new Promise(r=>out.toBlob(r,"image/jpeg",.85)); }
+ return {text:(fields.length?"Filled-in form fields:\n"+fields.join("\n")+"\n\nPage text:\n":"")+text, image, pages:doc.numPages}; }
+async function readDocx(file){ await loadLib("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js",()=>!!window.mammoth); const r=await window.mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()}); return r.value||""; }
+function upKind(f){ const n=(f.name||"").toLowerCase(), t=f.type||"";
+ if(/\.json$/.test(n)||t==="application/json") return "json"; if(/\.pdf$/.test(n)||t==="application/pdf") return "pdf"; if(/\.docx$/.test(n)) return "docx";
+ if(/^image\//.test(t)||/\.(png|jpe?g|webp|gif)$/.test(n)) return "image"; if(/\.(txt|md|csv|html?)$/.test(n)||/^text\//.test(t)) return "text"; return ""; }
+
+/* a sheet file the codex wrote itself: lossless, no AI */
+const S80=(x,n)=>String(x==null?"":x).slice(0,n||200);
+function cleanList(a,keys,n){ return Array.isArray(a)?a.slice(0,n||60).filter(x=>x&&typeof x==="object").map(x=>{ const o={}; keys.forEach(k=>{ if(x[k]!=null) o[k]=typeof x[k]==="boolean"?x[k]:S80(x[k],k==="desc"||k==="body"?2000:200); }); return o; }):[]; }
+function codexChar(c){ c=c||{}; const n=x=>num(x);
+ const o={name:S80(c.name,120),player:S80(c.player,80),campaign:S80(c.campaign,80),race:S80(c.race,120),cls:S80(c.cls,120),bio:S80(c.bio,3000),notes:S80(c.notes,4000),
+  level:n(c.level)||1,levelCap:S80(c.levelCap,20),exp:n(c.exp),expPer:n(c.expPer)||100,gainSp:n(c.gainSp),gainStat:n(c.gainStat),sp:n(c.sp),stat:n(c.stat),money:Math.max(0,n(c.money)),
+  hpMax:n(c.hpMax),hpCur:n(c.hpCur),enLabel:S80(c.enLabel,20)||"MP",enMax:n(c.enMax),enCur:n(c.enCur),
+  tags:Array.isArray(c.tags)?c.tags.slice(0,20).map(t=>S80(t,40)):[],
+  stats:cleanList(c.stats,["k","v"],40),skills:cleanList(c.skills,["rank","name","desc"]),moves:cleanList(c.moves,["name","desc","cost","dmg"]),
+  items:cleanList(c.items,["name","desc","buff","equipped"]),sections:cleanList(c.sections,["h","body"],20),buffs:cleanList(c.buffs,["name","effect","turns"],20)};
+ if(c.unlocked&&typeof c.unlocked==="object"){ const u={}; Object.entries(c.unlocked).forEach(([t,ids])=>{ if(S.data.trees[t]&&Array.isArray(ids)) u[t]=ids.map(String).slice(0,300); }); o.unlocked=u; }
+ return o; }
+
+/* AI transcribes a sheet from a picture, PDF, Word file or text */
+function cleanSheet(r){ r=r||{}; const base=cleanChar(r);
+ const L=(a,f,n)=>Array.isArray(a)?a.slice(0,n).map(f).filter(Boolean):[];
+ base.skills=L(r.skills,s=>s&&({rank:str(s.rank,10),name:str(s.name,80),desc:str(s.desc,400)}),40);
+ base.moves=L(r.moves,m=>m&&({name:str(m.name,80),desc:str(m.desc,400),cost:str(m.cost,40),dmg:str(m.dmg,40)}),40);
+ base.items=L(r.items,i=>i&&({name:str(i.name,80),desc:str(i.desc,400)}),40);
+ base.stats=L(r.stats,s=>s&&({k:str(s.k,40),v:str(s.v,40)}),40);
+ base.sections=L(r.sections,s=>s&&({h:str(s.h,80),body:str(s.body,2000)}),8);
+ base.player=str(r.player,80); base.money=Math.max(0,num(r.money)); base.exp=num(r.exp); base.hpCur=num(r.hpCur)||base.hpMax; base.enCur=num(r.enCur)||base.enMax;
+ return base; }
+async function upRead(){ const U=ui.up; if(!U.file||U.busy) return; U.err=""; U.result=null; U.portrait=null; U.src="";
+ if(U.kind==="json"){ try{ const j=JSON.parse(await U.file.text()); const c=j&&j.codex==="party-codex-character"?j.character:(j&&j.name&&(j.stats||j.moves||j.skills||j.hpMax!=null)?j:null);
+   if(!c) throw new Error("x"); U.result=codexChar(c); U.src="codex"; if(!U.camp&&U.result.campaign) U.camp=U.result.campaign;
+   if(j.portrait&&/^data:image\/(png|jpeg|webp|gif);base64,/.test(j.portrait.data||"")&&j.portrait.data.length<1200000) U.portrait={data:j.portrait.data,w:num(j.portrait.w),h:num(j.portrait.h),caption:S80(j.portrait.caption,80)};
+  }catch(e){ U.err="That JSON file isn't a character sheet from the Party Codex. Other files (pictures, PDFs, Word, text) are read by AI instead."; } render(true); return; }
+ if(!CAP.sample){ U.err="Reading this kind of file needs the AI, which isn't available here. Sheet files downloaded from the Party Codex (.json) still work."; render(true); return; }
+ U.busy=true; U.ctl=new AbortController(); U.status="Opening the file…"; render(true);
+ try{ let text="", image=null;
+  if(U.kind==="image"){ U.status="Reading the picture…"; render(true); const r=await shrinkImage(U.file,1600,1800000); image=dataToBlob(r.data); }
+  else if(U.kind==="pdf"){ U.status="Opening the PDF…"; render(true); const r=await readPdf(U.file); text=r.text; image=r.image; }
+  else if(U.kind==="docx"){ U.status="Opening the Word file…"; render(true); text=await readDocx(U.file); }
+  else text=await U.file.text();
+  text=String(text||"").replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim().slice(0,30000);
+  const useImg=image&&CAP.img; if(!useImg&&text.length<20) throw {code:"empty"};
+  const ex=chars().filter(c=>U.camp&&c.campaign===U.camp).slice(0,1).map(c=>({stats:(c.stats||[]).map(s=>s.k),enLabel:c.enLabel}));
+  const prompt=`Transcribe this tabletop RPG character sheet into JSON for a homebrew D&D-style codex. Copy what the sheet says: keep its own stat names, numbers, ranks, spell and item names. Do not invent anything that isn't on the sheet; leave a field empty ("" or 0 or []) when the sheet doesn't have it. Put abilities and feats in skills, attacks and spells in moves, equipment in items, and personality, backstory, languages, proficiencies or other notes in sections.
+${ex.length?`Characters in this campaign use these stat names; use them where the sheet clearly means the same thing: ${JSON.stringify(ex)}`:""}
+Skill ranks: use the sheet's rank or level if it has one, otherwise leave rank "".
+Money: convert to a single number of gold pieces (10 sp = 1 gp, 100 cp = 1 gp, 1 pp = 10 gp) unless the sheet uses its own currency, then use its gold amount.
+${useImg?"The sheet is in the attached image.":""}${text?`\nText from the file:\n"""\n${text}\n"""`:""}
+Return ONLY a JSON object: {"name":string,"player":string,"race":string,"cls":string (class and subclass),"bio":string (appearance or a short summary from the sheet),"level":number,"exp":number,"hpMax":number,"hpCur":number,"enLabel":string (energy name like MP, Ki, Spell Slots),"enMax":number,"money":number,"tags":[string],"stats":[{"k":string,"v":string}],"skills":[{"rank":string,"name":string,"desc":string}],"moves":[{"name":string,"desc":string,"cost":string,"dmg":string}],"items":[{"name":string,"desc":string}],"sections":[{"h":string,"body":string}]}`;
+  U.status="Writing the sheet…"; render(true);
+  const o={signal:U.ctl.signal,modelTier:"default"}; if(useImg) o.images=[image];
+  U.result=cleanSheet(await CAP.sample.json(prompt,o)); U.src="ai";
+  if(!U.result.name&&!U.result.stats.length&&!U.result.moves.length){ U.result=null; throw {code:"empty"}; } }
+ catch(e){ U.err=e&&e.code==="empty"?"Couldn't find a character sheet in that file. Try a clearer photo or a different file.":e&&e.code?aiErr(e):(e&&e.message)||"Couldn't read that file."; if(HIDE_CODES.includes(e&&e.code)) CAP.sample=null; if(e&&e.code==="images_unavailable") CAP.img=null; }
+ U.busy=false; U.status=""; render(true); }
+function viewUpload(){ const U=ui.up, aiOk=!!CAP.sample;
+ const head=`<a href="#characters" class="muted">← All characters</a><section class="sheet-head"><span class="eyebrow">Upload</span><h1>Upload a character sheet</h1><p class="lede">Bring in a character from a file. ${aiOk?"AI reads pictures, PDFs, Word and text files and fills in a sheet.":"Sheet files downloaded from the Party Codex work here."} Nothing saves until you check it and press save.</p></section>`;
+ const types=[["Party Codex sheet (.json)","Exact copy, no AI. Use “Download sheet” on any character to make one."],["Photo or screenshot","A paper sheet, a phone photo, a screenshot from D&D Beyond or another app."+(aiOk?"":" Needs AI.")],["PDF","Including fillable character sheet PDFs."+(aiOk?"":" Needs AI.")],["Word or text","A .docx, .txt or notes you wrote."+(aiOk?"":" Needs AI.")]];
+ return head+`<div class="split" style="align-items:start">${campOptions()}<div class="fieldset">
+  <div class="up-drop" id="up-drop" tabindex="0" role="button" aria-label="Choose a character sheet file">
+   <b>${U.file?esc(U.name):"Drop a character sheet here"}</b><span class="muted">${U.file?"Choose a different file":"or click to choose a file"}</span>
+   <input type="file" id="up-file" accept="${UP_ACCEPT}" hidden></div>
+  <label class="fld"><span>Campaign</span><input type="text" id="up-camp" list="camps" value="${esc(U.camp)}" placeholder="Which game is this character in?"></label>
+  <div class="actions"><button class="btn primary" data-act="up-read" ${!U.file||U.busy?"disabled":""}>${U.busy?esc(U.status||"Reading…"):U.kind==="json"?"Load sheet":"Read the sheet"}</button>${U.busy?`<button class="btn" data-act="up-stop">Stop</button>`:""}</div>
+  ${U.err?`<div class="note">${esc(U.err)}</div>`:""}
+  <ul class="clean up-types">${types.map(([a,b])=>`<li><b>${esc(a)}</b><span class="muted">${esc(b)}</span></li>`).join("")}</ul></div>
+  <div>${U.result?upPreview(U.result):U.busy?`<div class="empty"><h3>${esc(U.status||"Reading…")}</h3><p class="muted">Big sheets can take up to a minute.</p></div>`:`<div class="empty"><h3>Your sheet shows up here</h3><p class="muted">Check it over, then save it as a new character. You can edit anything afterwards.</p></div>`}</div></div>`; }
+function upPreview(c){ const U=ui.up;
+ const html=previewChar(Object.assign({stats:[],skills:[],moves:[],items:[]},c)).replace(/<div class="actions">[\s\S]*<\/div><\/div>$/,"");
+ return html.replace('<span class="eyebrow">Draft</span>',`<span class="eyebrow">${U.src==="codex"?"From a Party Codex file":"Read by AI. Check the numbers before you save."}</span>${U.portrait?`<img class="up-portrait" src="${U.portrait.data}" alt="Portrait from the file">`:""}`)
+  +`${c.money?`<p class="meta">Money: ${esc(coinText(c.money))}</p>`:""}${(c.sections||[]).length?`<p class="meta">Notes: ${esc(c.sections.map(s=>s.h).filter(Boolean).join(", "))}</p>`:""}
+  <div class="actions"><button class="btn primary" data-act="up-save">Save as a new character</button><button class="btn" data-act="up-clear">Discard</button></div></div>`; }
+function upPick(f){ if(!f) return; const k=upKind(f); if(!k){ toast("That file type can't be read. Use a picture, PDF, Word, text or Party Codex .json file."); return; }
+ if(f.size>25e6){ toast("That file is too big (over 25 MB)."); return; } Object.assign(ui.up,{file:f,kind:k,name:f.name||"Pasted picture",result:null,err:"",portrait:null}); render(true); }
+document.addEventListener("click",e=>{ const d=e.target.closest("#up-drop"); if(d){ const i=$("#up-file"); if(i) i.click(); return; }
+ const b=e.target.closest("[data-act]"); if(!b) return; const a=b.dataset.act, U=ui.up;
+ if(a==="up-read"){ upRead(); return; }
+ if(a==="up-stop"){ U.ctl&&U.ctl.abort(); return; }
+ if(a==="up-clear"){ U.result=null; U.portrait=null; render(true); return; }
+ if(a==="up-save"){ const r=U.result; if(!r) return; const k=rid(); const doc=Object.assign(newChar(),r,{campaign:U.camp||r.campaign||""}); if(!doc.hpCur) doc.hpCur=doc.hpMax; if(!doc.enCur) doc.enCur=doc.enMax;
+  if(U.portrait){ const pid=rid(); put("photos",pid,{data:U.portrait.data,w:U.portrait.w,h:U.portrait.h,caption:U.portrait.caption||doc.name||"Portrait",charId:k,createdAt:Date.now()},true); doc.portrait=pid; } else delete doc.portrait;
+  put("characters",k,doc,true); Object.assign(U,{file:null,name:"",kind:"",result:null,portrait:null,err:""}); toast("Character saved"); go("char-"+k); return; }
+ if(a==="char-dl"){ const c=getC(b.dataset.c); if(!c) return; if(!CAP.dl){ toast("Downloads aren't available in this view."); return; }
+  const p=c.portrait&&S.data.photos&&S.data.photos[c.portrait]; const out={codex:"party-codex-character",v:1,exportedAt:new Date().toISOString(),character:c,portrait:p?{data:p.data,w:p.w,h:p.h,caption:p.caption||""}:null};
+  delete out.character.portrait; const fn=(String(c.name||"character").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"-")||"character")+".json";
+  Promise.resolve(CAP.dl.save({filename:fn,data:new Blob([JSON.stringify(out,null,1)],{type:"application/json"})})).then(()=>{},err=>{ if(err&&err.code!=="cancelled"&&err.code!=="declined") toast("Couldn't download: "+((err&&err.message)||"error")); }); return; }
+});
+document.addEventListener("change",e=>{ const t=e.target; if(t&&t.id==="up-file"){ upPick(t.files&&t.files[0]); t.value=""; } });
+document.addEventListener("input",e=>{ if(e.target&&e.target.id==="up-camp") ui.up.camp=e.target.value; });
+document.addEventListener("keydown",e=>{ if(e.target&&e.target.id==="up-drop"&&(e.key==="Enter"||e.key===" ")){ e.preventDefault(); const i=$("#up-file"); if(i) i.click(); } });
+["dragover","dragenter"].forEach(ev=>document.addEventListener(ev,e=>{ const d=e.target.closest&&e.target.closest("#up-drop"); if(d){ e.preventDefault(); d.classList.add("over"); } }));
+document.addEventListener("dragleave",e=>{ const d=e.target.closest&&e.target.closest("#up-drop"); if(d) d.classList.remove("over"); });
+document.addEventListener("drop",e=>{ const d=e.target.closest&&e.target.closest("#up-drop"); if(!d) return; e.preventDefault(); d.classList.remove("over"); upPick(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]); });
+document.addEventListener("paste",e=>{ if((location.hash||"")!=="#upload-char") return; const f=[...((e.clipboardData&&e.clipboardData.files)||[])][0]; if(f){ e.preventDefault(); upPick(f); } });
 /* ================= render & routing ================= */
 function render(force){
  if(!force&&(ui.editing||ui.dragging||typing())){ pending=true; return; } pending=false;
@@ -2052,6 +2171,7 @@ function render(force){
  else if(h==="table"){html=viewTable();nav="table";}
  else if(h==="money"){html=viewMoney();nav="money";}
  else if(h==="ai-char"){html=viewAiChar();nav="characters";}
+ else if(h==="upload-char"){html=viewUpload();nav="characters";}
  else if(h==="maps"){html=viewMaps();nav="maps";}
  else if((m=h.match(/^map-(\w+)$/))){html=viewMap(m[1]);nav="maps";}
  else if(h==="playmat"){html=viewMats();nav="playmat";}
